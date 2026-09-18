@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<!--
+  DEV PREVIEW — not shipped in the extension.
+  Loads the real sidepanel.html markup and sidepanel.js controller against
+  the mocked chrome.* runtime in preview-mock.js, served over a static
+  server from the repo root:  http://localhost:8123/preview/
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Felt — side panel preview</title>
+  <link rel="stylesheet" href="../sidepanel/sidepanel.css">
+  <style>
+    html { background: #202a24; }
+    body {
+      max-width: 420px;
+      margin: 0 auto;
+      min-height: 100vh;
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 24px 80px rgba(0, 0, 0, 0.45);
+    }
+    @media (prefers-color-scheme: dark) { html { background: #06090f; } }
+    .preview-tag {
+      position: fixed;
+      left: 50%;
+      bottom: 10px;
+      transform: translateX(-50%);
+      z-index: 300;
+      font: 600 10px/1.4 system-ui, sans-serif;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #9fb3a8;
+      background: rgba(0, 0, 0, 0.55);
+      padding: 5px 12px;
+      border-radius: 999px;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="panel-host" style="display:contents"><p style="padding:24px;font:500 13px system-ui">Loading panel…</p></div>
+  <span class="preview-tag">Dev preview · mock position (Scholar's mate net)</span>
+
+  <script src="../engine/core-utils.js"></script>
+  <script src="../engine/analysis-contract.js"></script>
+  <script src="../engine/analysis-policy.js"></script>
+  <script src="../engine/chaos-attack.js"></script>
+  <script src="../engine/early-king-hunt.js"></script>
+  <script src="../engine/cloud-engine.js"></script>
+  <script src="../engine/hint-engine.js"></script>
+  <script src="preview-mock.js"></script>
+  <script>
+    (async function () {
+      // Pull the real panel markup so the preview can never drift from it.
+      const html = await (await fetch('../sidepanel/sidepanel.html')).text();
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const host = document.getElementById('panel-host');
+      host.textContent = '';
+      // Move every body node except the script tags.
+      Array.from(doc.body.childNodes).forEach((node) => {
+        if (node.nodeType === 1 && node.tagName === 'SCRIPT') return;
+        host.appendChild(document.importNode(node, true));
+      });
+      // Then boot the real controller.
+      const script = document.createElement('script');
+      script.src = '../sidepanel/sidepanel.js';
+      document.body.appendChild(script);
+    })().catch((err) => {
+      document.getElementById('panel-host').textContent = 'Preview failed to load: ' + err;
+    });
+  </script>
+</body>
+</html>

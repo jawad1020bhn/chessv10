@@ -1,0 +1,2151 @@
+/* ==========================================================================
+   Felt — Material 3 Expressive design system
+   Seed: felt green HCT-inspired palette. Tokens first, components second.
+   ========================================================================== */
+
+:root {
+  /* ── Reference typefaces ── */
+  --md-ref-typeface-brand: "Segoe UI Variable Display", "SF Pro Display", ui-rounded, "Trebuchet MS", system-ui, sans-serif;
+  --md-ref-typeface-plain: "Segoe UI Variable Text", "SF Pro Text", "Roboto", system-ui, sans-serif;
+
+  /* ── Shape scale ── */
+  --md-sys-shape-none: 0;
+  --md-sys-shape-xs: 4px;
+  --md-sys-shape-sm: 8px;
+  --md-sys-shape-md: 12px;
+  --md-sys-shape-lg: 16px;
+  --md-sys-shape-xl: 28px;
+  --md-sys-shape-xl-inc: 36px;
+  --md-sys-shape-xxl: 48px;   /* Expressive extra-extra-large — sheets, dialogs */
+  --md-sys-shape-full: 999px;
+
+  /* ── Motion ── */
+  --md-sys-motion-spatial: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --md-sys-motion-effects: cubic-bezier(0.4, 0, 0.2, 1);
+  --md-sys-motion-fast: 160ms;
+  --md-sys-motion-med: 280ms;
+  --md-sys-motion-slow: 480ms;
+
+  /* ── Space ── */
+  --md-sys-space-1: 4px;
+  --md-sys-space-2: 8px;
+  --md-sys-space-3: 12px;
+  --md-sys-space-4: 16px;
+  --md-sys-space-5: 20px;
+  --md-sys-space-6: 24px;
+  --md-sys-space-8: 32px;
+
+  /* ── Light scheme from felt-green seed ── */
+  --md-sys-color-primary: #006c4c;
+  --md-sys-color-on-primary: #ffffff;
+  --md-sys-color-primary-container: #5ef2b8;
+  --md-sys-color-on-primary-container: #002114;
+  --md-sys-color-secondary: #4c6358;
+  --md-sys-color-on-secondary: #ffffff;
+  --md-sys-color-secondary-container: #cfe9da;
+  --md-sys-color-on-secondary-container: #092017;
+  --md-sys-color-tertiary: #8b5000;
+  --md-sys-color-on-tertiary: #ffffff;
+  --md-sys-color-tertiary-container: #ffdcbe;
+  --md-sys-color-on-tertiary-container: #2c1600;
+  --md-sys-color-error: #ba1a1a;
+  --md-sys-color-on-error: #ffffff;
+  --md-sys-color-error-container: #ffdad6;
+  --md-sys-color-on-error-container: #410002;
+  --md-sys-color-surface: #f4fbf5;
+  --md-sys-color-surface-dim: #d4dbd6;
+  --md-sys-color-surface-bright: #f4fbf5;
+  --md-sys-color-surface-container-lowest: #ffffff;
+  --md-sys-color-surface-container-low: #eef5ef;
+  --md-sys-color-surface-container: #e8efe9;
+  --md-sys-color-surface-container-high: #e2e9e3;
+  --md-sys-color-surface-container-highest: #dce4de;
+  --md-sys-color-on-surface: #161d19;
+  --md-sys-color-on-surface-variant: #3f4943;
+  --md-sys-color-outline: #6f7973;
+  --md-sys-color-outline-variant: #bfc9c1;
+  --md-sys-color-inverse-surface: #2b322e;
+  --md-sys-color-inverse-on-surface: #ecf2ed;
+  --md-sys-color-inverse-primary: #3dd59d;
+  --md-sys-color-scrim: #000000;
+  --md-sys-color-shadow: #000000;
+
+  /* Legacy aliases used by existing JS inline styles — mapped onto live
+     tokens so dark mode keeps contrast (yellow follows tertiary). */
+  --accent-green: var(--md-sys-color-primary);
+  --accent-yellow: var(--md-sys-color-tertiary);
+  --accent-red: var(--md-sys-color-error);
+  --text-secondary: var(--md-sys-color-on-surface-variant);
+
+  --md-comp-state-hover: color-mix(in oklab, var(--md-sys-color-on-surface) 8%, transparent);
+  --md-comp-state-focus: color-mix(in oklab, var(--md-sys-color-primary) 16%, transparent);
+
+  /* ── Component icon masks (Material symbols, data-URI) ── */
+  --md-icon-check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M9.55 17.3 4.8 12.55l1.4-1.4 3.35 3.35 8.25-8.25 1.4 1.4Z'/%3E%3C/svg%3E");
+  --md-icon-warning: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M1 21h22L12 2 1 21Zm12-3h-2v-2h2v2Zm0-4h-2v-4h2v4Z'/%3E%3C/svg%3E");
+  --md-icon-error: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2Zm1 15h-2v-2h2v2Zm0-4h-2V7h2v6Z'/%3E%3C/svg%3E");
+  --md-icon-bolt: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M7 2v11h3v9l7-12h-4l4-8Z'/%3E%3C/svg%3E");
+  --md-icon-bulb: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1Zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26C17.81 13.47 19 11.38 19 9c0-3.86-3.14-7-7-7Z'/%3E%3C/svg%3E");
+  --md-icon-crosshair: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4Zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v3.06C6.83 4.52 3.52 7.83 3.06 12H1v2h3.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-3.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-3.06ZM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7Z'/%3E%3C/svg%3E");
+  --md-icon-flag: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M14.4 6 14 4H5v17h2v-7h5.6l.4 2h7V6Z'/%3E%3C/svg%3E");
+  --md-icon-trend-down: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='m16 18 2.29-2.29-4.88-4.88-4 4L2 7.41 3.41 6l6 6 4-4 5.88 5.88L22 11.17V18h-6Z'/%3E%3C/svg%3E");
+  --md-icon-info: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2Zm1 15h-2v-6h2v6Zm0-8h-2V9h2V7Z'/%3E%3C/svg%3E");
+  --md-icon-reply: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z'/%3E%3C/svg%3E");
+
+  /* Chess-piece identity neutrals — theme-independent on purpose. */
+  --md-piece-light: #f7f4ee;
+  --md-piece-light-on: #1c1b17;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --md-sys-color-primary: #3dd59d;
+    --md-sys-color-on-primary: #003826;
+    --md-sys-color-primary-container: #005138;
+    --md-sys-color-on-primary-container: #5ef2b8;
+    --md-sys-color-secondary: #b3ccbe;
+    --md-sys-color-on-secondary: #1e352b;
+    --md-sys-color-secondary-container: #354b41;
+    --md-sys-color-on-secondary-container: #cfe9da;
+    --md-sys-color-tertiary: #ffb86b;
+    --md-sys-color-on-tertiary: #4a2800;
+    --md-sys-color-tertiary-container: #693c00;
+    --md-sys-color-on-tertiary-container: #ffdcbe;
+    --md-sys-color-error: #ffb4ab;
+    --md-sys-color-on-error: #690005;
+    --md-sys-color-error-container: #93000a;
+    --md-sys-color-on-error-container: #ffdad6;
+    --md-sys-color-surface: #0e1512;
+    --md-sys-color-surface-dim: #0e1512;
+    --md-sys-color-surface-bright: #343b37;
+    --md-sys-color-surface-container-lowest: #090f0c;
+    --md-sys-color-surface-container-low: #161d19;
+    --md-sys-color-surface-container: #1a211d;
+    --md-sys-color-surface-container-high: #242c27;
+    --md-sys-color-surface-container-highest: #2f3632;
+    --md-sys-color-on-surface: #dce4de;
+    --md-sys-color-on-surface-variant: #bfc9c1;
+    --md-sys-color-outline: #89938c;
+    --md-sys-color-outline-variant: #3f4943;
+    --md-sys-color-inverse-surface: #dce4de;
+    --md-sys-color-inverse-on-surface: #2b322e;
+    --md-sys-color-inverse-primary: #006c4c;
+  }
+}
+
+/* ── Type scale (baseline + emphasized) ── */
+.md-typescale-display-sm-em {
+  font-family: var(--md-ref-typeface-brand);
+  font-size: 2.125rem;
+  line-height: 1.18;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+.md-typescale-headline-sm {
+  font-family: var(--md-ref-typeface-brand);
+  font-size: 1.5rem;
+  line-height: 1.25;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.md-typescale-title-large-em {
+  font-family: var(--md-ref-typeface-brand);
+  font-size: 1.375rem;
+  line-height: 1.25;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.md-typescale-title-sm {
+  font-family: var(--md-ref-typeface-brand);
+  font-size: 0.875rem;
+  line-height: 1.3;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+.md-typescale-body-md {
+  font-family: var(--md-ref-typeface-plain);
+  font-size: 0.875rem;
+  line-height: 1.45;
+  font-weight: 400;
+}
+.md-typescale-label-lg {
+  font-family: var(--md-ref-typeface-plain);
+  font-size: 0.875rem;
+  line-height: 1.25;
+  font-weight: 600;
+}
+.md-typescale-label-md {
+  font-family: var(--md-ref-typeface-plain);
+  font-size: 0.6875rem;
+  line-height: 1.3;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body { height: 100%; width: 100%; }
+
+body {
+  font-family: var(--md-ref-typeface-plain);
+  background: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+  font-size: 0.875rem;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 3px solid var(--md-sys-color-secondary);
+  outline-offset: 2px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── App shell ── */
+.md-app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background:
+    radial-gradient(120% 80% at 100% -10%, color-mix(in oklab, var(--md-sys-color-primary-container) 55%, transparent), transparent 55%),
+    var(--md-sys-color-surface);
+}
+
+.md-app.no-position #eval-section,
+.md-app.no-position #move-class-section,
+.md-app.no-position #position-info,
+.md-app.no-position #idea-section { display: none; }
+
+.md-canvas > * {
+  animation: mdRise var(--md-sys-motion-med) var(--md-sys-motion-spatial) both;
+  /* Tiles with overflow:hidden would otherwise be shrunk to ~0 by flex
+     shrink (their automatic minimum is 0), clipping the balance/verdict
+     text and leaving only the colored surface. Keep them content-sized
+     and let the scrollable canvas handle the overflow instead. */
+  flex-shrink: 0;
+}
+.md-canvas > *:nth-child(2) { animation-delay: 30ms; }
+.md-canvas > *:nth-child(3) { animation-delay: 60ms; }
+.md-canvas > *:nth-child(4) { animation-delay: 90ms; }
+.md-canvas > *:nth-child(5) { animation-delay: 120ms; }
+.md-canvas > *:nth-child(6) { animation-delay: 150ms; }
+@keyframes mdRise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+
+.md-app.analyzing .md-loading { display: inline-flex; }
+.md-app.analyzing .status-dot { display: none; }
+
+/* ── App bar ── */
+.md-app-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--md-sys-space-3);
+  padding: var(--md-sys-space-3) var(--md-sys-space-4);
+  min-height: 72px;
+}
+
+.md-app-bar__identity { display: flex; align-items: center; gap: var(--md-sys-space-3); min-width: 0; }
+.md-app-bar__titles { min-width: 0; }
+.md-app-bar__eyebrow { color: var(--md-sys-color-on-surface-variant); }
+.md-app-bar__actions { display: flex; align-items: center; gap: var(--md-sys-space-2); flex-shrink: 0; }
+
+.md-brand-mark {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  color: var(--md-sys-color-on-primary);
+  flex-shrink: 0;
+}
+.md-brand-mark__shape {
+  position: absolute;
+  inset: 0;
+  border-radius: 40% 60% 55% 45%;
+  background: var(--md-sys-color-primary);
+  animation: mdShapeIdle 8s var(--md-sys-motion-effects) infinite;
+}
+.md-brand-mark svg { position: relative; z-index: 1; }
+
+@keyframes mdShapeIdle {
+  0%, 100% { border-radius: 40% 60% 55% 45%; }
+  50% { border-radius: 58% 42% 38% 62%; }
+}
+
+/* ── Buttons ── */
+.md-icon-btn {
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: var(--md-sys-shape-full);
+  background: transparent;
+  color: var(--md-sys-color-on-surface-variant);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: background-color var(--md-sys-motion-fast) var(--md-sys-motion-effects),
+    transform var(--md-sys-motion-med) var(--md-sys-motion-spatial);
+}
+.md-icon-btn:hover { background: var(--md-comp-state-hover); }
+.md-icon-btn:active { transform: scale(0.92); }
+.md-icon-btn--tonal {
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+.md-btn {
+  min-height: 44px;
+  padding: 0 20px;
+  border-radius: var(--md-sys-shape-full);
+  border: 0;
+  font-family: var(--md-ref-typeface-plain);
+  font-size: 0.875rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: transform var(--md-sys-motion-med) var(--md-sys-motion-spatial),
+    background-color var(--md-sys-motion-fast) var(--md-sys-motion-effects);
+}
+.md-btn:active { transform: scale(0.96); }
+.md-btn--tonal {
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+.md-btn--outlined {
+  background: transparent;
+  color: var(--md-sys-color-primary);
+  border: 1px solid var(--md-sys-color-outline);
+}
+.md-btn--tonal:hover {
+  background: color-mix(in oklab, var(--md-sys-color-on-secondary-container) 8%, var(--md-sys-color-secondary-container));
+}
+.md-btn--outlined:hover {
+  background: color-mix(in oklab, var(--md-sys-color-primary) 8%, transparent);
+}
+.md-btn:disabled { opacity: 0.38; cursor: not-allowed; }
+.md-btn-row { display: flex; gap: var(--md-sys-space-2); flex-wrap: wrap; margin-top: var(--md-sys-space-4); }
+
+.md-btn-group {
+  position: relative;
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--md-sys-color-surface-container-high);
+  border-radius: var(--md-sys-shape-full);
+}
+.md-btn-group--wrap { flex-wrap: wrap; border-radius: var(--md-sys-shape-xl); }
+.md-btn-group--connected { gap: 0; }
+
+/* Sliding selection pill. JS measures the checked item and writes
+   --seg-x / --seg-y / --seg-w / --seg-h; the pill springs between options
+   with the expressive spatial curve instead of swapping paint on items. */
+.md-segmented__indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--seg-w, 0px);
+  height: var(--seg-h, 100%);
+  transform: translate(var(--seg-x, 3px), var(--seg-y, 3px));
+  border-radius: var(--md-sys-shape-full);
+  background: var(--seg-role-bg, var(--md-sys-color-secondary-container));
+  box-shadow: var(--seg-ring, none);
+  opacity: 0;
+  transition:
+    transform var(--md-sys-motion-med) var(--md-sys-motion-spatial),
+    width var(--md-sys-motion-med) var(--md-sys-motion-spatial),
+    height var(--md-sys-motion-med) var(--md-sys-motion-spatial),
+    background-color var(--md-sys-motion-fast) var(--md-sys-motion-effects),
+    box-shadow var(--md-sys-motion-fast) var(--md-sys-motion-effects),
+    opacity 120ms var(--md-sys-motion-effects);
+  will-change: transform, width;
+  pointer-events: none;
+}
+.md-segmented.is-ready .md-segmented__indicator { opacity: 1; }
+
+/* A wrapping group (e.g. quality on narrow panels) can make the pill a wide
+   rectangle — a full-pill radius would bulge it. Follow the container's
+   extra-large rounding instead. */
+.md-btn-group--wrap .md-segmented__indicator { border-radius: var(--md-sys-shape-xl); }
+
+.md-btn-group__item {
+  appearance: none;
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 0;
+  background: transparent;
+  color: var(--md-sys-color-on-surface-variant);
+  font-family: var(--md-ref-typeface-plain);
+  font-size: 0.75rem;
+  font-weight: 650;
+  padding: 8px 12px;
+  min-height: 36px;
+  border-radius: var(--md-sys-shape-full);
+  cursor: pointer;
+  transition:
+    color var(--md-sys-motion-fast) var(--md-sys-motion-effects),
+    transform var(--md-sys-motion-med) var(--md-sys-motion-spatial);
+}
+.md-btn-group__item:hover { color: var(--md-sys-color-on-surface); }
+.md-btn-group__item:active { transform: scale(0.92); }
+.md-btn-group__item.is-selected,
+.md-btn-group__item[aria-checked="true"] {
+  color: var(--seg-role-fg, var(--md-sys-color-on-secondary-container));
+}
+
+.piece-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: transform var(--md-sys-motion-med) var(--md-sys-motion-spatial),
+    border-color var(--md-sys-motion-fast) var(--md-sys-motion-effects);
+}
+.piece-dot--light { background: var(--md-piece-light); border: 1.5px solid var(--md-sys-color-outline); }
+.piece-dot--dark { background: var(--md-piece-light-on); border: 1.5px solid transparent; }
+
+/* ── Side selector: the piece switch ──
+   A real M3 switch: a compact pill track with a circular thumb that springs
+   between sides. Both kings are drawn on the track ends (inline SVG, always
+   visible) so the meaning never hides; the thumb carries the coached king and
+   repaints to that side's piece color. The track tints toward the piece tone
+   on state. Driven purely by data-selected — no JS measuring. */
+.md-side-switch {
+  position: relative;
+  width: 76px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: var(--md-sys-shape-full);
+  background: var(--side-track, var(--md-sys-color-surface-container-high));
+  border: 1px solid var(--md-sys-color-outline-variant);
+  transition: background-color var(--md-sys-motion-med) var(--md-sys-motion-effects);
+}
+.md-side-switch[data-selected="w"] {
+  --side-track: color-mix(in oklab, var(--md-piece-light) 24%, var(--md-sys-color-surface-container-high));
+  --side-bg: var(--md-piece-light);
+  --side-fg: var(--md-piece-light-on);
+}
+.md-side-switch[data-selected="b"] {
+  --side-track: color-mix(in oklab, var(--md-piece-light-on) 28%, var(--md-sys-color-surface-container-high));
+  --side-bg: var(--md-piece-light-on);
+  --side-fg: var(--md-piece-light);
+}
+.md-side-switch__thumb {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--side-bg);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.35), inset 0 0 0 0.5px rgb(255 255 255 / 0.15);
+  pointer-events: none;
+  transition:
+    transform var(--md-sys-motion-med) var(--md-sys-motion-spatial),
+    background-color var(--md-sys-motion-med) var(--md-sys-motion-effects);
+  will-change: transform;
+}
+.md-side-switch[data-selected="b"] .md-side-switch__thumb { transform: translateX(32px); }
+.md-side-switch__king {
+  width: 22px;
+  height: 22px;
+  color: var(--side-fg);
+  transition:
+    color var(--md-sys-motion-fast) var(--md-sys-motion-effects),
+    transform var(--md-sys-motion-med) var(--md-sys-motion-spatial);
+}
+.md-side-switch__hit {
+  appearance: none;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 50%;
+  border: 0;
+  background: transparent;
+  z-index: 1;
+  cursor: pointer;
+}
+.md-side-switch__hit[data-color="w"] { left: 0; border-radius: var(--md-sys-shape-full) 0 0 var(--md-sys-shape-full); }
+.md-side-switch__hit[data-color="b"] { right: 0; border-radius: 0 var(--md-sys-shape-full) var(--md-sys-shape-full) 0; }
+.md-side-switch__hit:focus-visible { outline: 2px solid var(--md-sys-color-primary); outline-offset: 2px; }
+
+/* ── Status ── */
+.md-status {
+  display: flex;
+  align-items: center;
+  gap: var(--md-sys-space-2);
+  padding: 0 var(--md-sys-space-4) var(--md-sys-space-3);
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 0.8125rem;
+  font-weight: 550;
+}
+.md-status__meta { margin-left: auto; display: flex; align-items: center; gap: var(--md-sys-space-2); min-width: 0; }
+.context-turn { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.status-dot.offline, .status-dot.error { background: var(--md-sys-color-error); }
+.status-dot.connecting, .status-dot.analyzing { background: var(--md-sys-color-tertiary); }
+.status-dot.online { background: var(--md-sys-color-primary); }
+.status-dot.unknown { background: var(--md-sys-color-outline); }
+
+.md-loading { display: none; width: 18px; height: 18px; place-items: center; }
+.md-loading__blob {
+  width: 14px;
+  height: 14px;
+  background: var(--md-sys-color-primary);
+  animation: mdMorph 900ms var(--md-sys-motion-spatial) infinite;
+}
+@keyframes mdMorph {
+  0% { border-radius: 50%; transform: rotate(0deg); }
+  35% { border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%; }
+  70% { border-radius: 68% 32% 28% 72% / 60% 40% 60% 40%; }
+  100% { border-radius: 50%; transform: rotate(180deg); }
+}
+
+/* Position context is whispered, not tagged: the turn line picks up a
+   state tint and nothing else. */
+.context-turn { transition: color var(--md-sys-motion-fast) var(--md-sys-motion-effects); }
+#position-context.verified .context-turn { color: var(--md-sys-color-primary); }
+#position-context.partial .context-turn { color: var(--md-sys-color-tertiary); }
+
+/* ── Canvas ── */
+.md-canvas {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 var(--md-sys-space-4) var(--md-sys-space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-sys-space-3);
+}
+
+/* ── Hero ── */
+.md-hero {
+  position: relative;
+  padding: var(--md-sys-space-5);
+  border-radius: var(--md-sys-shape-xl-inc);
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-surface);
+  min-height: 148px;
+  overflow: hidden;
+  transition: background-color var(--md-sys-motion-med) var(--md-sys-motion-effects),
+    color var(--md-sys-motion-med) var(--md-sys-motion-effects);
+}
+.md-hero::after {
+  content: "";
+  position: absolute;
+  width: 160px;
+  height: 160px;
+  right: -36px;
+  top: -48px;
+  border-radius: 42% 58% 60% 40%;
+  background: color-mix(in oklab, currentColor 13%, transparent);
+  pointer-events: none;
+  transition: background-color var(--md-sys-motion-med) var(--md-sys-motion-effects);
+}
+.md-hero::before {
+  content: "";
+  position: absolute;
+  width: 110px;
+  height: 110px;
+  left: -42px;
+  bottom: -56px;
+  border-radius: 62% 38% 44% 56%;
+  background: color-mix(in oklab, currentColor 8%, transparent);
+  pointer-events: none;
+  transition: background-color var(--md-sys-motion-med) var(--md-sys-motion-effects);
+}
+.md-hero__meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--md-sys-space-2); position: relative; z-index: 1; }
+.md-hero__kicker { opacity: 0.78; letter-spacing: 0.12em; }
+.md-hero__stage { position: relative; z-index: 1; min-height: 84px; text-align: center; }
+.hint-text {
+  font-family: var(--md-ref-typeface-brand);
+  font-size: clamp(1.6rem, 6vw, 2.2rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.hint-text.fade-in { animation: mdHintIn var(--md-sys-motion-med) var(--md-sys-motion-spatial); }
+@keyframes mdHintIn {
+  from { opacity: 0.2; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+/* ── Move lockup ─────────────────────────────────────────────────
+   The hero lead-in. A big rendered piece on top, then the squares as
+   a large centered lockup: "♖" / "a1 → e1". */
+.hint-fromto {
+  margin-top: var(--md-sys-space-2);
+  display: grid;
+  grid-template-columns: auto auto auto;
+  justify-content: center;
+  align-items: center;
+  column-gap: 10px;
+  row-gap: 8px;
+  width: 100%;
+  text-align: center;
+  font-family: ui-monospace, "SF Mono", Consolas, monospace;
+}
+/* The moving piece — rendered large with a soft studio drop. */
+.sq-piece {
+  grid-column: 1 / -1;
+  justify-self: center;
+  font-family: var(--md-ref-typeface-brand);
+  font-size: 3.75rem;
+  line-height: 1;
+  transform: translateY(0.04em);
+  animation: mdHeroPieceLift 560ms var(--md-sys-motion-spatial) both;
+}
+.sq-piece.is-white {
+  color: var(--md-piece-light);
+  filter: drop-shadow(0 3px 5px color-mix(in oklab, var(--md-sys-color-on-surface) 45%, transparent));
+}
+.sq-piece.is-black {
+  color: var(--md-piece-light-on);
+  filter: drop-shadow(0 3px 5px color-mix(in oklab, white 14%, transparent));
+}
+/* Squares lockup — big, bold, centered chips joined by an arrow. */
+.sq {
+  display: inline-grid;
+  place-items: center;
+  padding: 8px 14px;
+  border-radius: var(--md-sys-shape-md);
+  background: color-mix(in oklab, currentColor 13%, transparent);
+  border: 1px solid color-mix(in oklab, currentColor 20%, transparent);
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  transition:
+    background-color var(--md-sys-motion-med) var(--md-sys-motion-effects),
+    border-color var(--md-sys-motion-med) var(--md-sys-motion-effects);
+}
+.sq-arrow {
+  font-size: 1.7rem;
+  font-weight: 600;
+  opacity: 0.75;
+  line-height: 1;
+}
+@keyframes mdHeroPieceLift {
+  from { transform: translateY(10px) scale(0.86); opacity: 0; }
+  to { transform: translateY(0.04em); opacity: 1; }
+}
+.hint-card.blocked .hint-text { color: var(--md-sys-color-error); }
+.hint-card.super-ultra-mode { --hero-shift: 8deg; }
+.hint-card.super-ultra-mode ~ .md-hero__meta,
+.md-hero:has(.super-ultra-mode) {
+  /* hero already uses container color; aggression is a tertiary wash */
+}
+.md-hero:has(.super-ultra-mode) {
+  background: var(--md-sys-color-tertiary-container);
+}
+.md-hero:has(.human-mode) {
+  background: var(--md-sys-color-secondary-container);
+}
+
+/* ── Caption rail (The idea) ──
+   Everything that used to be glued onto the hero line — the pressure idea,
+   captures, sacrifice soundness, cost, risk, king-hunt notes — renders here
+   as a staggered M3 list with shape-play icon blobs. */
+.md-idea {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-sys-space-2);
+  padding: var(--md-sys-space-4);
+  border-radius: var(--md-sys-shape-xl);
+  background: var(--md-sys-color-surface-container-lowest);
+}
+.md-idea[hidden] { display: none; }
+.md-idea__title { color: var(--md-sys-color-on-surface-variant); letter-spacing: 0.1em; }
+.md-idea__list { display: flex; flex-direction: column; gap: var(--md-sys-space-2); }
+.md-idea__row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--md-sys-space-3);
+  padding: 8px 10px;
+  border-radius: var(--md-sys-shape-lg);
+  background: var(--md-sys-color-surface-container-low);
+  animation: mdIdeaIn var(--md-sys-motion-med) var(--md-sys-motion-spatial) both;
+  animation-delay: calc(var(--i, 0) * 45ms);
+}
+@keyframes mdIdeaIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+.md-idea__icon {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 38% 62% 57% 43% / 44% 38% 62% 56%;
+  background: var(--idea-role-bg, var(--md-sys-color-secondary-container));
+}
+.md-idea__icon::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--idea-role-fg, var(--md-sys-color-on-secondary-container));
+  -webkit-mask: var(--idea-icon, var(--md-icon-info)) center / 18px no-repeat;
+          mask: var(--idea-icon, var(--md-icon-info)) center / 18px no-repeat;
+}
+.md-idea__row--idea {
+  --idea-icon: var(--md-icon-bulb);
+  --idea-role-bg: var(--md-sys-color-primary-container);
+  --idea-role-fg: var(--md-sys-color-on-primary-container);
+}
+.md-idea__row--capture { --idea-icon: var(--md-icon-crosshair); }
+.md-idea__row--sacrifice {
+  --idea-icon: var(--md-icon-bolt);
+  --idea-role-bg: var(--md-sys-color-tertiary-container);
+  --idea-role-fg: var(--md-sys-color-on-tertiary-container);
+}
+.md-idea__row--kinghunt {
+  --idea-icon: var(--md-icon-flag);
+  --idea-role-bg: var(--md-sys-color-tertiary-container);
+  --idea-role-fg: var(--md-sys-color-on-tertiary-container);
+}
+.md-idea__row--cost {
+  --idea-icon: var(--md-icon-trend-down);
+  --idea-role-bg: var(--md-sys-color-error-container);
+  --idea-role-fg: var(--md-sys-color-on-error-container);
+}
+.md-idea__row--risk {
+  --idea-icon: var(--md-icon-warning);
+  --idea-role-bg: var(--md-sys-color-error-container);
+  --idea-role-fg: var(--md-sys-color-on-error-container);
+}
+.md-idea__row--posture { --idea-icon: var(--md-icon-info); }
+.md-idea__row--reply {
+  --idea-icon: var(--md-icon-reply);
+  --idea-role-bg: var(--md-sys-color-tertiary-container);
+  --idea-role-fg: var(--md-sys-color-on-tertiary-container);
+}
+.md-idea__texts { display: flex; flex-direction: column; gap: 1px; min-width: 0; padding-top: 1px; }
+.md-idea__label { font-size: 0.8125rem; font-weight: 700; line-height: 1.3; }
+.md-idea__body {
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--md-sys-color-on-surface-variant);
+  overflow-wrap: anywhere;
+}
+
+/* ── Cards ── */
+.md-card {
+  background: var(--md-sys-color-surface-container-low);
+  border-radius: var(--md-sys-shape-xl);
+  padding: var(--md-sys-space-4);
+}
+.md-card h2 { margin-bottom: var(--md-sys-space-2); color: var(--md-sys-color-on-surface); }
+
+/* ── Balance ──
+   Greenfield Expressive surface: the score is the headline, a 32dp
+   dual-identity ribbon is the meter, and a morphing fulcrum rides the
+   split. Lean (you / opp / even) retints the whole tile so the eye
+   finds the story before reading a number. */
+.md-balance {
+  --balance-role-bg: var(--md-sys-color-surface-container-lowest);
+  --balance-role-fg: var(--md-sys-color-on-surface);
+  --balance-role-muted: var(--md-sys-color-on-surface-variant);
+  --eval-pct: 50;   /* fulcrum rests centered until the first analysis */
+  position: relative;
+  overflow: hidden;
+  padding: var(--md-sys-space-5);
+  border-radius: 28px 36px 22px 32px;
+  background: var(--balance-role-bg);
+  color: var(--balance-role-fg);
+  transition:
+    background-color var(--md-sys-motion-med) var(--md-sys-motion-effects),
+    color var(--md-sys-motion-med) var(--md-sys-motion-effects),
+    border-radius var(--md-sys-motion-slow) var(--md-sys-motion-spatial);
+}
+/* Lean retints the container only. Foreground stays on the neutral
+   surface tokens so the text reads white/grey no matter how red or green
+   the box becomes. */
+.md-balance[data-lean="you"] {
+  --balance-role-bg: var(--md-sys-color-primary-container);
+  border-radius: 36px 24px 32px 20px;
+}
+.md-balance[data-lean="opp"] {
+  --balance-role-bg: var(--md-sys-color-error-container);
+  border-radius: 20px 34px 18px 36px;
+}
+.md-balance__orb {
+  position: absolute;
+  pointer-events: none;
+  background: color-mix(in oklab, currentColor 10%, transparent);
+  animation: mdShapeIdle 10s var(--md-sys-motion-effects) infinite;
+}
+.md-balance__orb--a {
+  width: 140px;
+  height: 140px;
+  right: -48px;
+  top: -56px;
+  border-radius: 42% 58% 60% 40%;
+}
+.md-balance__orb--b {
+  width: 88px;
+  height: 88px;
+  left: -36px;
+  bottom: -40px;
+  border-radius: 62% 38% 44% 56%;
+  animation-delay: -3s;
+}
+.md-balance__head { position: relative; z-index: 1; }
+.md-balance__kicker-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+/* Muted text follows the tile's live role, so a "you"/"opp" retint never
+   strands the kicker or description on a mismatched on-surface-variant. */
+.md-balance__kicker { color: var(--balance-role-muted); letter-spacing: 0.12em; }
+.md-balance__stale {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 2px 8px;
+  border-radius: var(--md-sys-shape-full);
+  background: color-mix(in oklab, currentColor 14%, transparent);
+  color: var(--balance-role-muted);
+  line-height: 1.2;
+}
+.md-balance .eval-description {
+  margin-top: 4px;
+  color: var(--balance-role-muted);
+  max-width: 28ch;
+}
+.md-skeleton {
+  display: inline-block;
+  min-width: 2ch;
+  border-radius: var(--md-sys-shape-xs);
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklab, currentColor 12%, transparent) 0%,
+    color-mix(in oklab, currentColor 28%, transparent) 50%,
+    color-mix(in oklab, currentColor 12%, transparent) 100%
+  );
+  background-size: 200% 100%;
+  animation: mdSkeletonShimmer 1.5s ease-in-out infinite;
+  color: transparent;
+  user-select: none;
+}
+@keyframes mdSkeletonShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.md-balance__ribbon { position: relative; z-index: 1; margin-top: var(--md-sys-space-5); }
+
+/* The beam: an M3-expressive meter with a slightly bulged, asymmetric
+   silhouette instead of a perfect pill — it reads as a sculpted object, not
+   a flat progress bar. A soft sheen sweeps across, and a center tick marks
+   the equal-split "zero" point. */
+.eval-bar {
+  position: relative;
+  height: 36px;
+  border-radius: 34px 26px 30px 22px;
+  overflow: visible;
+  display: flex;
+  background: linear-gradient(
+    180deg,
+    var(--md-sys-color-inverse-surface),
+    color-mix(in oklab, var(--md-sys-color-inverse-surface) 86%, var(--md-sys-color-outline) 14%)
+  );
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklab, white 26%, transparent),
+    inset 0 0 0 1.5px color-mix(in oklab, var(--md-sys-color-outline) 20%, transparent),
+    0 2px 12px color-mix(in oklab, var(--md-sys-color-shadow) 20%, transparent);
+}
+.eval-bar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, transparent 6%, color-mix(in oklab, white 14%, transparent) 42%, transparent 74%);
+  pointer-events: none;
+}
+.eval-bar::after {
+  content: "";
+  position: absolute;
+  top: 7px;
+  bottom: 7px;
+  left: 50%;
+  width: 2px;
+  border-radius: 2px;
+  background: color-mix(in oklab, var(--md-sys-color-outline-variant) 85%, transparent);
+  transform: translateX(-0.5px);
+  pointer-events: none;
+}
+.eval-bar-white {
+  background: linear-gradient(
+    180deg,
+    var(--md-piece-light),
+    color-mix(in oklab, var(--md-piece-light) 88%, var(--md-piece-light-on))
+  );
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  transform-origin: left center;
+  box-shadow: inset -2px 0 6px color-mix(in oklab, var(--md-piece-light-on) 16%, transparent);
+  transition: transform var(--md-sys-motion-slow) var(--md-sys-motion-spatial);
+}
+/* The win-probability breakdown lives inside the meter: a pill on each side
+   ("You 52%" / "Opp 48%"). The inverse-surface chip keeps legible contrast
+   over both the white fill and the dark remainder of the track. */
+.eval-bar-pct {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  padding: 3px 8px;
+  border-radius: var(--md-sys-shape-full);
+  background: var(--md-sys-color-inverse-surface);
+  color: var(--md-sys-color-inverse-on-surface);
+  box-shadow: 0 1px 3px color-mix(in oklab, var(--md-sys-color-shadow) 24%, transparent);
+  font-family: var(--md-ref-typeface-brand);
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+  transition: opacity var(--md-sys-motion-fast) var(--md-sys-motion-effects);
+}
+.eval-bar-pct--left { left: 6px; }
+.eval-bar-pct--right { right: 6px; }
+/* No live analysis yet — the meter stays a silent placeholder and the
+   breakdown pills fade out. */
+.md-balance[data-state="empty"] .eval-bar-pct,
+.md-balance[data-state="loading"] .eval-bar-pct,
+.md-balance[data-state="error"] .eval-bar-pct {
+  opacity: 0;
+}
+/* The morphing fulcrum rides the White/Black split. `--eval-pct` is set on
+   the tile (an ancestor) so the value inherits down to this absolute child.
+   It reads as a weight resting on the beam: a light halo ring (the beam's
+   color) plus a tonal core with the leading side's role color. */
+.md-balance__fulcrum {
+  position: absolute;
+  top: 50%;
+  left: calc(var(--eval-pct, 50) * 1%);
+  width: 24px;
+  height: 24px;
+  border-radius: 44% 56% 48% 52%;
+  background: var(--md-sys-color-primary);
+  box-shadow:
+    0 0 0 5px color-mix(in oklab, var(--md-sys-color-inverse-surface) 72%, transparent),
+    0 6px 16px color-mix(in oklab, var(--md-sys-color-shadow) 32%, transparent);
+  transform: translate(-50%, -50%);
+  transition:
+    left var(--md-sys-motion-slow) var(--md-sys-motion-spatial),
+    background-color var(--md-sys-motion-fast) var(--md-sys-motion-effects),
+    border-radius var(--md-sys-motion-med) var(--md-sys-motion-spatial);
+  pointer-events: none;
+  animation: mdShapeIdle 7s var(--md-sys-motion-effects) infinite;
+}
+.md-balance__fulcrum::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--md-sys-color-on-primary);
+  transform: translate(-50%, -50%);
+  transition: background-color var(--md-sys-motion-fast) var(--md-sys-motion-effects);
+}
+.md-balance[data-lean="you"] .md-balance__fulcrum {
+  background: var(--md-sys-color-primary);
+  border-radius: 58% 42% 38% 62%;
+}
+.md-balance[data-lean="you"] .md-balance__fulcrum::after { background: var(--md-sys-color-on-primary); }
+.md-balance[data-lean="opp"] .md-balance__fulcrum {
+  background: var(--md-sys-color-error);
+  border-radius: 32% 68% 55% 45%;
+}
+.md-balance[data-lean="opp"] .md-balance__fulcrum::after { background: var(--md-sys-color-on-error); }
+.eval-labels {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: var(--md-sys-space-3);
+  font-variant-numeric: tabular-nums;
+}
+.eval-side {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+}
+/* Both side labels carry the same emphasized weight — the piece dots carry
+   identity, so neither side is muted into secondary status. The color still
+   follows the tile's live role so a lean retint keeps full contrast. */
+.eval-label {
+  font-weight: 750;
+  color: var(--balance-role-fg);
+}
+
+/* ── Banners ── */
+.md-banner {
+  border-radius: var(--md-sys-shape-lg);
+  padding: var(--md-sys-space-3) var(--md-sys-space-4);
+}
+.md-banner--primary {
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+}
+.md-banner--tertiary {
+  background: var(--md-sys-color-tertiary-container);
+  color: var(--md-sys-color-on-tertiary-container);
+  display: flex;
+  gap: var(--md-sys-space-2);
+  margin-top: var(--md-sys-space-3);
+}
+.md-banner--error {
+  background: var(--md-sys-color-error-container);
+  color: var(--md-sys-color-on-error-container);
+  display: flex;
+  gap: var(--md-sys-space-2);
+  margin-top: var(--md-sys-space-3);
+}
+.md-banner--iconed { align-items: center; }
+.md-banner__icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  background: currentColor;
+  -webkit-mask: var(--md-icon-warning) center / contain no-repeat;
+          mask: var(--md-icon-warning) center / contain no-repeat;
+}
+.md-banner--error .md-banner__icon { -webkit-mask-image: var(--md-icon-error); mask-image: var(--md-icon-error); }
+.md-banner__kicker { opacity: 0.8; margin-bottom: 4px; }
+.critical-moment-section { position: relative; padding-right: 44px; color: var(--md-sys-color-on-surface); }
+.md-banner__icon--float {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  -webkit-mask-image: var(--md-icon-bolt);
+          mask-image: var(--md-icon-bolt);
+}
+
+/* ── Facts ── */
+.md-fact-list { display: flex; flex-direction: column; }
+.md-fact {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--md-sys-space-3);
+  padding: 10px 0;
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+}
+.md-fact:last-child { border-bottom: 0; padding-bottom: 0; }
+.info-label {
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.info-value {
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Last move (verdict tile) ──
+   Not a chip-in-a-card. The whole surface *is* the judgment: role
+   color, organic radius, emphasized type, and a morphing accuracy
+   ring. Shape gets sharper as the verdict worsens. */
+.md-verdict {
+  --verdict-role-bg: var(--md-sys-color-secondary-container);
+  --verdict-role-fg: var(--md-sys-color-on-surface);
+  --verdict-role-muted: var(--md-sys-color-on-surface-variant);
+  --verdict-ring: var(--md-sys-color-primary);
+  position: relative;
+  overflow: hidden;
+  padding: var(--md-sys-space-5);
+  border-radius: 28px 34px 24px 30px;
+  background: var(--verdict-role-bg);
+  color: var(--verdict-role-fg);
+  transition:
+    background-color var(--md-sys-motion-med) var(--md-sys-motion-effects),
+    color var(--md-sys-motion-med) var(--md-sys-motion-effects),
+    border-radius var(--md-sys-motion-slow) var(--md-sys-motion-spatial);
+}
+.md-verdict[data-verdict="none"],
+.md-verdict[data-verdict="empty"] {
+  --verdict-role-bg: var(--md-sys-color-surface-container-lowest);
+  border-radius: 28px 34px 24px 30px;
+}
+/* Verdict retints the container only — the type always stays on the neutral
+   surface tokens (white/grey) so it reads the same over green, amber, or red. */
+.md-verdict[data-verdict="brilliant"],
+.md-verdict[data-verdict="great"] {
+  --verdict-role-bg: var(--md-sys-color-primary-container);
+  --verdict-ring: var(--md-sys-color-primary);
+  border-radius: 36px 22px 34px 18px;
+}
+/* Every good verdict shares the rounded organic shape — the radius only
+   sharpens when the move gets worse. */
+.md-verdict[data-verdict="best"],
+.md-verdict[data-verdict="excellent"],
+.md-verdict[data-verdict="good"] {
+  --verdict-role-bg: var(--md-sys-color-primary-container);
+  --verdict-ring: var(--md-sys-color-primary);
+  border-radius: 34px 24px 36px 22px;
+}
+.md-verdict[data-verdict="inaccuracy"],
+.md-verdict[data-verdict="mistake"] {
+  --verdict-role-bg: var(--md-sys-color-tertiary-container);
+  --verdict-ring: var(--md-sys-color-tertiary);
+  border-radius: 20px 28px 16px 32px;
+}
+.md-verdict[data-verdict="blunder"] {
+  --verdict-role-bg: var(--md-sys-color-error-container);
+  --verdict-ring: var(--md-sys-color-error);
+  border-radius: 16px 28px 14px 24px;
+}
+.md-verdict__burst {
+  position: absolute;
+  width: 150px;
+  height: 150px;
+  right: -46px;
+  top: -58px;
+  border-radius: 38% 62% 48% 52%;
+  background: color-mix(in oklab, currentColor 12%, transparent);
+  pointer-events: none;
+  animation: mdShapeIdle 9s var(--md-sys-motion-effects) infinite;
+}
+.md-verdict__kicker {
+  position: relative;
+  z-index: 1;
+  color: var(--verdict-role-muted);
+  letter-spacing: 0.12em;
+  margin-bottom: var(--md-sys-space-2);
+}
+.md-verdict__stage {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--md-sys-space-4);
+}
+.md-verdict__empty {
+  width: 100%;
+  padding: var(--md-sys-space-2) 0;
+  display: flex;
+  align-items: center;
+  gap: var(--md-sys-space-3);
+}
+.md-verdict__empty-icon {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 44% 56% 52% 48% / 50% 46% 54% 50%;
+  background: var(--md-sys-color-surface-container-high);
+}
+.md-verdict__empty-icon::after {
+  content: "\265F";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 1.25rem;
+  line-height: 1;
+  color: var(--md-sys-color-on-surface-variant);
+}
+.md-verdict__empty-text {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--md-sys-color-on-surface-variant);
+  line-height: 1.4;
+}
+.md-verdict__copy { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.md-verdict__mover {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--verdict-role-muted);
+}
+.md-verdict__label {
+  font-family: var(--md-ref-typeface-brand);
+  font-size: clamp(1.35rem, 5.4vw, 1.75rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+  color: var(--verdict-role-fg);
+}
+/* Chess annotation symbol (!!, ?!, …) — quieter than the verdict word so
+   the label stays the hero, but never dropped to disabled opacity. */
+.md-verdict__symbol {
+  font-weight: 800;
+  letter-spacing: 0;
+  opacity: 0.85;
+  margin-left: 2px;
+}
+.md-verdict__metric {
+  font-size: 0.8125rem;
+  font-weight: 650;
+  color: var(--verdict-role-muted);
+}
+.md-verdict__ring {
+  --acc: 0;
+  position: relative;
+  width: 72px;
+  height: 72px;
+  flex-shrink: 0;
+  border-radius: 42% 58% 50% 50%;
+  background:
+    conic-gradient(var(--verdict-ring) calc(var(--acc) * 1%), color-mix(in oklab, currentColor 16%, transparent) 0);
+  display: grid;
+  place-items: center;
+  transition:
+    border-radius var(--md-sys-motion-med) var(--md-sys-motion-spatial),
+    background var(--md-sys-motion-slow) var(--md-sys-motion-effects);
+}
+.md-verdict[data-verdict="brilliant"] .md-verdict__ring,
+.md-verdict[data-verdict="great"] .md-verdict__ring { border-radius: 38% 62% 44% 56%; }
+.md-verdict[data-verdict="blunder"] .md-verdict__ring { border-radius: 28% 36% 30% 34%; }
+.md-verdict__ring::after {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border-radius: inherit;
+  background: var(--verdict-role-bg);
+  transition: background-color var(--md-sys-motion-med) var(--md-sys-motion-effects);
+}
+.md-verdict__ring-stack {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+}
+.md-verdict__ring-val {
+  font-family: var(--md-ref-typeface-brand);
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  color: var(--verdict-role-fg);
+}
+.md-verdict__ring-cap {
+  display: block;
+  font-size: 0.5625rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--verdict-role-muted);
+  margin-top: 2px;
+}
+
+/* ── Toolbar + FAB ── */
+.md-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--md-sys-space-3) var(--md-sys-space-4) var(--md-sys-space-4);
+}
+.md-toolbar__label { color: var(--md-sys-color-on-surface-variant); }
+.md-fab {
+  width: 56px;
+  height: 56px;
+  border: 0;
+  border-radius: 18px 28px 22px 28px;
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  box-shadow: 0 8px 20px color-mix(in oklab, var(--md-sys-color-primary) 28%, transparent);
+  transition: transform var(--md-sys-motion-med) var(--md-sys-motion-spatial),
+    border-radius var(--md-sys-motion-med) var(--md-sys-motion-spatial);
+}
+.md-fab:hover { border-radius: 28px; transform: translateY(-2px); }
+.md-fab:active { transform: scale(0.94); }
+.md-fab.spinning svg { animation: mdSpin 0.8s linear infinite; }
+@keyframes mdSpin { to { transform: rotate(360deg); } }
+
+/* ── Settings sheet ── */
+.md-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: var(--md-sys-color-surface);
+  display: none;
+  flex-direction: column;
+}
+.md-sheet[style*="display: block"],
+.md-sheet:not([hidden])[style*="block"] { display: flex; }
+.md-sheet__bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: var(--md-sys-space-5) var(--md-sys-space-4) var(--md-sys-space-3);
+}
+.md-sheet__eyebrow { color: var(--md-sys-color-on-surface-variant); margin-bottom: 4px; }
+.md-sheet__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 var(--md-sys-space-4) var(--md-sys-space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-sys-space-6);
+}
+
+.md-settings-block { display: flex; flex-direction: column; gap: var(--md-sys-space-3); }
+.md-settings-block h3 { color: var(--md-sys-color-primary); }
+.md-field-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--md-sys-color-on-surface-variant);
+}
+.md-help { color: var(--md-sys-color-on-surface-variant); font-size: 0.75rem; line-height: 1.45; }
+.md-disclaimer {
+  font-size: 0.75rem;
+  color: var(--md-sys-color-on-surface-variant);
+  background: var(--md-sys-color-surface-container);
+  border-radius: var(--md-sys-shape-lg);
+  padding: var(--md-sys-space-4);
+}
+
+.md-choice-stack { display: flex; flex-direction: column; gap: var(--md-sys-space-2); }
+.md-choice {
+  position: relative;
+  text-align: left;
+  border: 0;
+  cursor: pointer;
+  padding: var(--md-sys-space-3) 48px var(--md-sys-space-3) var(--md-sys-space-4);
+  border-radius: var(--md-sys-shape-lg);
+  background: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  transition: background-color var(--md-sys-motion-fast) var(--md-sys-motion-effects),
+    color var(--md-sys-motion-fast) var(--md-sys-motion-effects),
+    border-radius var(--md-sys-motion-med) var(--md-sys-motion-spatial),
+    transform var(--md-sys-motion-med) var(--md-sys-motion-spatial);
+}
+.md-choice:hover { background: color-mix(in oklab, var(--md-sys-color-on-surface) 6%, var(--md-sys-color-surface-container-high)); }
+.md-choice:active { transform: scale(0.97); }
+/* Selection draws a check with a springy pop. */
+.md-choice::after {
+  content: "";
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  width: 22px;
+  height: 22px;
+  transform: translateY(-50%) scale(0.3);
+  border-radius: 50%;
+  background: var(--md-sys-color-on-secondary-container);
+  -webkit-mask: var(--md-icon-check) center / 14px no-repeat;
+          mask: var(--md-icon-check) center / 14px no-repeat;
+  opacity: 0;
+  transition: transform var(--md-sys-motion-med) var(--md-sys-motion-spatial),
+    opacity var(--md-sys-motion-fast) var(--md-sys-motion-effects);
+}
+.md-choice__title { font-weight: 750; }
+.md-choice__sub { font-size: 0.75rem; color: var(--md-sys-color-on-surface-variant); }
+.md-choice.is-selected,
+.md-choice[aria-checked="true"] {
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+  border-radius: var(--md-sys-shape-xl);
+}
+.md-choice.is-selected::after,
+.md-choice[aria-checked="true"]::after {
+  opacity: 1;
+  transform: translateY(-50%) scale(1);
+}
+.md-choice.is-selected .md-choice__sub,
+.md-choice[aria-checked="true"] .md-choice__sub {
+  color: color-mix(in oklab, var(--md-sys-color-on-secondary-container) 75%, transparent);
+}
+
+.md-switch-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--md-sys-space-3);
+  padding: var(--md-sys-space-2) 0;
+}
+.md-switch-row__title { font-weight: 650; }
+/* Revealing the Ultra-only Early King Hunt row when the style flips to
+   Ultra attack — a short spatial rise instead of an abrupt pop. */
+.early-king-hunt-setting:not([hidden]) { animation: mdRowIn 320ms var(--md-sys-motion-spatial); }
+@keyframes mdRowIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+.md-switch { position: relative; display: inline-flex; cursor: pointer; flex-shrink: 0; }
+/* 52×44 hit area around the 52×32 visual track. */
+.md-switch input { position: absolute; inset: -6px 0; width: 52px; height: 44px; margin: 0; opacity: 0; cursor: pointer; z-index: 2; }
+.md-switch__track {
+  position: relative;
+  width: 52px;
+  height: 32px;
+  border-radius: var(--md-sys-shape-full);
+  background: var(--md-sys-color-surface-container-highest);
+  border: 2px solid var(--md-sys-color-outline);
+  transition: background-color var(--md-sys-motion-fast) var(--md-sys-motion-effects),
+    border-color var(--md-sys-motion-fast) var(--md-sys-motion-effects);
+}
+/* Thumb rides on `left` + size so the spatial spring can overshoot both
+   position and the 16→24px grow in one motion. */
+.md-switch__thumb {
+  position: absolute;
+  top: 50%;
+  left: 6px;
+  width: 16px;
+  height: 16px;
+  transform: translateY(-50%);
+  border-radius: var(--md-sys-shape-full);
+  background: var(--md-sys-color-outline);
+  transition: left var(--md-sys-motion-med) var(--md-sys-motion-spatial),
+    width var(--md-sys-motion-med) var(--md-sys-motion-spatial),
+    height var(--md-sys-motion-med) var(--md-sys-motion-spatial),
+    background-color var(--md-sys-motion-fast) var(--md-sys-motion-effects);
+}
+/* State-layer halo behind the thumb on hover / focus / press. */
+.md-switch__thumb::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0.6);
+  background: color-mix(in oklab, var(--md-sys-color-on-surface) 10%, transparent);
+  opacity: 0;
+  transition: transform var(--md-sys-motion-fast) var(--md-sys-motion-effects),
+    opacity var(--md-sys-motion-fast) var(--md-sys-motion-effects);
+}
+.md-switch:hover .md-switch__thumb::before,
+.md-switch input:focus-visible + .md-switch__track .md-switch__thumb::before,
+.md-switch input:active:not(:disabled) + .md-switch__track .md-switch__thumb::before {
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 1;
+}
+/* Check mark pops inside the thumb when on. */
+.md-switch__thumb::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--md-sys-color-on-primary-container);
+  -webkit-mask: var(--md-icon-check) center / 12px no-repeat;
+          mask: var(--md-icon-check) center / 12px no-repeat;
+  opacity: 0;
+  transform: scale(0.5);
+  transition: opacity var(--md-sys-motion-fast) var(--md-sys-motion-effects),
+    transform var(--md-sys-motion-fast) var(--md-sys-motion-spatial);
+}
+.md-switch input:checked + .md-switch__track {
+  background: var(--md-sys-color-primary);
+  border-color: var(--md-sys-color-primary);
+}
+.md-switch input:checked + .md-switch__track .md-switch__thumb {
+  left: calc(100% - 28px);   /* 24px thumb + 4px end inset */
+  width: 24px;
+  height: 24px;
+  background: var(--md-sys-color-on-primary);
+}
+.md-switch input:checked + .md-switch__track .md-switch__thumb::before {
+  background: color-mix(in oklab, var(--md-sys-color-primary) 16%, transparent);
+}
+.md-switch input:checked + .md-switch__track .md-switch__thumb::after {
+  opacity: 1;
+  transform: scale(1);
+}
+/* Pressed: the thumb stretches in the direction of travel (M3 squeeze). */
+.md-switch input:active:not(:disabled):not(:checked) + .md-switch__track .md-switch__thumb { width: 24px; }
+.md-switch input:checked:active:not(:disabled) + .md-switch__track .md-switch__thumb {
+  width: 28px;
+  left: calc(100% - 32px);
+}
+.md-switch input:disabled + .md-switch__track { opacity: 0.38; }
+.md-switch input:focus-visible + .md-switch__track { outline: 3px solid var(--md-sys-color-secondary); outline-offset: 2px; }
+
+/* ── M3 Expressive slider ─────────────────────────────────────────────
+   A custom-drawn range: 24px inset track, active/inactive segments, a
+   handle that morphs dot→pill and squeezes on press (same spatial spring
+   family as the switch). The native input stays on top as an invisible,
+   fully accessible hit target. */
+.md-slider-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-sys-space-2);
+  padding: var(--md-sys-space-2) 0;
+}
+.md-slider-row:not([hidden]) { animation: mdRowIn 320ms var(--md-sys-motion-spatial); }
+.md-slider-row__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--md-sys-space-3);
+}
+/* Value chip: primary-container pill that springs when the value changes. */
+.md-slider-row__value {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: var(--md-sys-color-on-secondary-container);
+  background: var(--md-sys-color-secondary-container);
+  border-radius: var(--md-sys-shape-full);
+  padding: 3px 12px;
+  transition: transform var(--md-sys-motion-fast) var(--md-sys-motion-spatial),
+    background-color var(--md-sys-motion-fast) var(--md-sys-motion-effects);
+}
+.md-slider-row__value.is-bumped { transform: scale(1.12); }
+
+.md-slider {
+  --slider-h: 24px;
+  position: relative;
+  height: calc(var(--slider-h) + 20px); /* generous touch target */
+  display: flex;
+  align-items: center;
+  touch-action: none;
+}
+.md-slider input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 3;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.md-slider__track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: var(--slider-h);
+  transform: translateY(-50%);
+  border-radius: var(--md-sys-shape-full);
+  background: var(--md-sys-color-surface-container-highest);
+  overflow: hidden;
+  pointer-events: none;
+}
+.md-slider__fill {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  height: 100%;
+  width: 50%;
+  border-radius: inherit;
+  transform-origin: left center;
+  background: var(--md-sys-color-primary);
+  transition: none; /* driven per-frame by JS while dragging */
+  pointer-events: none;
+}
+/* Handle: a 4×16 pill inside the track that morphs to an 18px circle-dot
+   at rest — the M3E "handle in the track" look. Squeezes wide on press. */
+.md-slider__handle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--md-sys-shape-full);
+  background: var(--md-sys-color-primary);
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    width var(--md-sys-motion-med) var(--md-sys-motion-spatial),
+    height var(--md-sys-motion-med) var(--md-sys-motion-spatial),
+    background-color var(--md-sys-motion-fast) var(--md-sys-motion-effects);
+  pointer-events: none;
+}
+.md-slider__handle-dot {
+  width: 4px;
+  height: 16px;
+  border-radius: var(--md-sys-shape-full);
+  background: var(--md-sys-color-on-primary);
+  transition: width var(--md-sys-motion-med) var(--md-sys-motion-spatial),
+    height var(--md-sys-motion-med) var(--md-sys-motion-spatial);
+}
+/* Hover / focus / press states mirror the switch's state-layer behavior. */
+.md-slider:hover .md-slider__handle,
+.md-slider.is-dragging .md-slider__handle {
+  width: 22px;
+  height: 22px;
+}
+.md-slider:hover .md-slider__handle-dot,
+.md-slider.is-dragging .md-slider__handle-dot {
+  width: 6px;
+  height: 18px;
+}
+.md-slider.is-dragging .md-slider__handle { height: var(--slider-h); border-radius: var(--md-sys-shape-full); }
+.md-slider.is-dragging .md-slider__handle-dot { height: 10px; width: 5px; }
+.md-slider:has(input:focus-visible) .md-slider__track {
+  outline: 3px solid var(--md-sys-color-secondary);
+  outline-offset: 2px;
+}
+/* Scale labels under the track. */
+.md-slider__scale {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.66rem;
+  color: var(--md-sys-color-on-surface-variant);
+  padding: 0 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+.md-health { display: flex; flex-direction: column; gap: 6px; }
+.md-health__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: var(--md-sys-shape-md);
+  background: var(--md-sys-color-surface-container);
+}
+.api-status {
+  font-size: 0.6875rem;
+  font-weight: 750;
+  padding: 4px 10px;
+  border-radius: var(--md-sys-shape-full);
+}
+.api-status.online { background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); }
+.api-status.error { background: var(--md-sys-color-error-container); color: var(--md-sys-color-on-error-container); }
+.api-status.unknown, .api-status.checking { background: var(--md-sys-color-surface-container-highest); color: var(--md-sys-color-on-surface-variant); }
+
+/* ── Diagnostics (Last 10 minutes) ──
+   An expressive stat card: an organic blob badge, four role-tinted metric
+   tiles with matching blob icons, and a live "provider calls" footer. */
+.md-diagnostics {
+  background: var(--md-sys-color-surface-container);
+  border-radius: 26px 34px 22px 30px;
+  padding: var(--md-sys-space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-sys-space-3);
+}
+.md-diagnostics__head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.md-diagnostics__badge {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border-radius: 42% 58% 50% 50% / 50% 44% 56% 50%;
+  background: var(--md-sys-color-primary-container);
+}
+.md-diagnostics__badge::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--md-sys-color-on-primary-container);
+  -webkit-mask: var(--md-icon-bolt) center / 14px no-repeat;
+          mask: var(--md-icon-bolt) center / 14px no-repeat;
+}
+.md-diagnostics__title {
+  color: var(--md-sys-color-on-surface-variant);
+  letter-spacing: 0.1em;
+}
+.md-diagnostics__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--md-sys-space-2);
+}
+.md-diagnostics__stat {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--md-sys-shape-lg);
+  background: var(--md-sys-color-surface-container-high);
+}
+.md-diagnostics__icon {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 40% 60% 55% 45% / 55% 45% 60% 40%;
+  background: var(--diag-role-bg, var(--md-sys-color-secondary-container));
+  transition: background-color var(--md-sys-motion-med) var(--md-sys-motion-effects);
+}
+.md-diagnostics__icon::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--diag-role-fg, var(--md-sys-color-on-secondary-container));
+  -webkit-mask: var(--diag-icon, var(--md-icon-info)) center / 16px no-repeat;
+          mask: var(--diag-icon, var(--md-icon-info)) center / 16px no-repeat;
+}
+.md-diagnostics__stat--saved {
+  --diag-icon: var(--md-icon-check);
+  --diag-role-bg: var(--md-sys-color-primary-container);
+  --diag-role-fg: var(--md-sys-color-on-primary-container);
+}
+.md-diagnostics__stat--coalesced {
+  --diag-icon: var(--md-icon-reply);
+}
+.md-diagnostics__stat--stale-served {
+  --diag-icon: var(--md-icon-warning);
+  --diag-role-bg: var(--md-sys-color-tertiary-container);
+  --diag-role-fg: var(--md-sys-color-on-tertiary-container);
+}
+.md-diagnostics__stat--stale-dropped {
+  --diag-icon: var(--md-icon-error);
+  --diag-role-bg: var(--md-sys-color-error-container);
+  --diag-role-fg: var(--md-sys-color-on-error-container);
+}
+.md-diagnostics__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.md-diagnostics__text strong {
+  font-family: var(--md-ref-typeface-brand);
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.md-diagnostics__text span {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--md-sys-color-on-surface-variant);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.md-diagnostics__foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: var(--md-sys-space-2);
+  border-top: 1px solid var(--md-sys-color-outline-variant);
+}
+.md-diagnostics__dot {
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--md-sys-color-primary);
+}
+.api-provider-calls { font-size: 0.75rem; color: var(--md-sys-color-on-surface-variant); line-height: 1.45; }
+
+/* ── Dialog / shortcuts ── */
+.md-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+}
+.md-dialog[hidden] { display: none; }
+.md-dialog[style*="display: block"] { display: block; }
+.md-dialog__scrim {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in oklab, var(--md-sys-color-scrim) 40%, transparent);
+  animation: mdScrimIn var(--md-sys-motion-fast) var(--md-sys-motion-effects);
+  cursor: pointer;
+}
+.md-dialog--closing .md-dialog__scrim {
+  animation: mdScrimOut var(--md-sys-motion-fast) var(--md-sys-motion-effects) forwards;
+}
+@keyframes mdScrimIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes mdScrimOut { to { opacity: 0; } }
+.md-dialog__sheet {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 16px;
+  background: var(--md-sys-color-surface-container-high);
+  border-radius: var(--md-sys-shape-xxl) var(--md-sys-shape-xxl) var(--md-sys-shape-xl-inc) var(--md-sys-shape-xl-inc);
+  padding: var(--md-sys-space-3) var(--md-sys-space-4) var(--md-sys-space-5);
+  transform-origin: bottom center;
+  animation: mdDialogSheetIn var(--md-sys-motion-med) var(--md-sys-motion-spatial);
+  box-shadow: 0 -8px 32px color-mix(in oklab, var(--md-sys-color-shadow) 12%, transparent);
+}
+@keyframes mdDialogSheetIn {
+  from { opacity: 0; transform: translateY(32px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+.md-dialog--closing .md-dialog__sheet {
+  animation: mdDialogSheetOut 200ms var(--md-sys-motion-effects) forwards;
+}
+@keyframes mdDialogSheetOut {
+  to { opacity: 0; transform: translateY(24px) scale(0.98); }
+}
+.md-dialog__handle {
+  width: 32px;
+  height: 4px;
+  border-radius: 4px;
+  background: var(--md-sys-color-outline-variant);
+  margin: 4px auto 12px;
+}
+.md-dialog__bar { display: flex; justify-content: space-between; align-items: center; }
+.md-shortcut {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+}
+.md-shortcut:last-child { border-bottom: 0; }
+kbd {
+  min-width: 28px;
+  text-align: center;
+  padding: 4px 8px;
+  border-radius: var(--md-sys-shape-xs);
+  background: var(--md-sys-color-surface-container-lowest);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+/* ── Snackbars ── */
+.md-snackbar-host {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: var(--md-sys-shape-xs);
+  background: var(--md-sys-color-inverse-surface);
+  color: var(--md-sys-color-inverse-on-surface);
+  pointer-events: auto;
+  box-shadow: 0 10px 24px color-mix(in oklab, var(--md-sys-color-shadow) 24%, transparent);
+  animation: mdToastIn 300ms var(--md-sys-motion-spatial);
+  will-change: transform, opacity;
+}
+@keyframes mdToastIn {
+  from { opacity: 0; transform: translateY(-10px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+.toast-exit {
+  opacity: 0;
+  transform: translateY(-6px) scale(0.98);
+  transition: opacity var(--md-sys-motion-fast) var(--md-sys-motion-effects),
+    transform var(--md-sys-motion-fast) var(--md-sys-motion-effects);
+}
+/* Icons are Material-symbol masks on a role chip — no font glyphs. */
+.toast-icon {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.toast-icon::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: currentColor;
+  -webkit-mask: var(--md-icon-info) center / 14px no-repeat;
+          mask: var(--md-icon-info) center / 14px no-repeat;
+}
+.toast-success .toast-icon { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); }
+.toast-success .toast-icon::before { -webkit-mask-image: var(--md-icon-check); mask-image: var(--md-icon-check); }
+.toast-error .toast-icon { background: var(--md-sys-color-error); color: var(--md-sys-color-on-error); }
+.toast-error .toast-icon::before { -webkit-mask-image: var(--md-icon-error); mask-image: var(--md-icon-error); }
+.toast-warning .toast-icon { background: var(--md-sys-color-tertiary); color: var(--md-sys-color-on-tertiary); }
+.toast-warning .toast-icon::before { -webkit-mask-image: var(--md-icon-warning); mask-image: var(--md-icon-warning); }
+.toast-info .toast-icon { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }
+.toast-info .toast-icon::before { -webkit-mask-image: var(--md-icon-info); mask-image: var(--md-icon-info); }
+
+/* ── Settings display fallback (JS toggles inline display) ── */
+#settings-panel { display: none; }
+#settings-panel[style*="display: block"] { display: flex; }
+#settings-panel[style*="display: flex"] { animation: mdSheetIn 340ms var(--md-sys-motion-spatial); }
+@keyframes mdSheetIn {
+  from { opacity: 0.4; transform: translateY(28px); }
+  to { opacity: 1; transform: none; }
+}
+/* Exit: JS adds the class, plays the motion, then hides after the timeout. */
+#settings-panel.md-sheet--closing { animation: mdSheetOut 220ms var(--md-sys-motion-effects) forwards; }
+@keyframes mdSheetOut {
+  to { opacity: 0; transform: translateY(24px); }
+}
+#shortcut-help { display: none; }
+#shortcut-help[style*="display: block"] { display: block; }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--md-sys-color-outline) 45%, transparent);
+  border-radius: 8px;
+}
+
+@media (max-width: 340px) {
+  .md-app-bar__eyebrow { display: none; }
+  .context-turn { display: none; }
+  .md-btn-group__item { padding-inline: 8px; }
+}
+
+/* ==========================================================================
+   Revision 13 — depth pass
+   New surfaces on the same tokens: no-board welcome, eval trend sparkline,
+   "Also consider" alternatives rail, verdict pop + count-up, scroll-aware
+   app bar elevation, swipe-dismiss toasts.
+   ========================================================================== */
+
+/* ── Welcome state (no board detected yet) ──
+   The hero keeps its container color and blob language; the knight sits on a
+   morphing pedestal and the copy teaches instead of apologizing. */
+.md-welcome {
+  position: relative;
+  z-index: 1;
+  min-height: 84px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-align: center;
+}
+.md-welcome__blob {
+  position: relative;
+  width: 64px;
+  height: 52px;
+  border-radius: 46% 54% 58% 42% / 56% 44% 56% 44%;
+  background: color-mix(in oklab, currentColor 16%, transparent);
+  animation: mdShapeIdle 7s var(--md-sys-motion-effects) infinite;
+}
+.md-welcome__knight {
+  position: absolute;
+  left: 50%;
+  top: 14px;
+  transform: translateX(-50%);
+  animation: mdWelcomeBob 3.2s ease-in-out infinite;
+}
+@keyframes mdWelcomeBob {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(-4px); }
+}
+.md-welcome__title {
+  font-family: var(--md-ref-typeface-brand);
+  font-size: 1.125rem;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+  margin-top: var(--md-sys-space-1);
+}
+.md-welcome__sub {
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--md-sys-color-on-surface-variant);
+  max-width: 30ch;
+}
+/* Once real content lands (a move, an error, anything with a SAN or a
+   message), the controller hides the welcome block. */
+.md-welcome[hidden] { display: none; }
+/* While the welcome owns the stage, the legacy waiting string stays silent. */
+.hint-card:has(.md-welcome:not([hidden])) .hint-text { display: none; }
+
+/* ── Eval trend sparkline ──
+   A quiet 28dp strip under the ribbon: one polyline of the recent evaluation
+   swing. Drawn by JS from evalHistory; hidden until there are ≥2 points. */
+.md-balance__spark {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 28px;
+  margin-top: var(--md-sys-space-3);
+  overflow: visible;
+  opacity: 0;
+  transition: opacity var(--md-sys-motion-med) var(--md-sys-motion-effects);
+}
+.md-balance__spark.is-live { opacity: 1; }
+.md-balance__spark path,
+.md-balance__spark circle {
+  vector-effect: non-scaling-stroke;
+}
+.md-balance__spark .spark-line {
+  fill: none;
+  stroke: var(--balance-role-fg);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.75;
+}
+.md-balance__spark .spark-zero {
+  stroke: var(--md-sys-color-outline-variant);
+  stroke-width: 1;
+  stroke-dasharray: 2 4;
+  opacity: 0.9;
+}
+.md-balance__spark .spark-dot {
+  fill: var(--balance-role-fg);
+  stroke: none;
+}
+
+/* ── Also consider (alternative lines) ──
+   Rows in the caption-rail dialect: piece glyph chip, SAN + score lockup, and
+   a thin share-of-best meter under each row. Not buttons — read-only. */
+.md-alts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-sys-space-2);
+  padding: var(--md-sys-space-4);
+  border-radius: var(--md-sys-shape-xl);
+  background: var(--md-sys-color-surface-container-lowest);
+}
+.md-alts[hidden] { display: none; }
+.md-alts__title { color: var(--md-sys-color-on-surface-variant); letter-spacing: 0.1em; }
+.md-alts__list { display: flex; flex-direction: column; }
+.md-alt-row {
+  display: grid;
+  grid-template-columns: auto auto 1fr auto;
+  align-items: center;
+  column-gap: 12px;
+  padding: 10px 2px;
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+  animation: mdIdeaIn var(--md-sys-motion-med) var(--md-sys-motion-spatial) both;
+  animation-delay: calc(var(--i, 0) * 55ms);
+}
+.md-alts__list .md-alt-row:last-child { border-bottom: 0; }
+.md-alt-row__piece {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  font-size: 1.35rem;
+  line-height: 1;
+  border-radius: 38% 62% 57% 43% / 44% 38% 62% 56%;
+  background: var(--alt-role-bg, var(--md-sys-color-secondary-container));
+  color: var(--alt-role-fg, var(--md-sys-color-on-secondary-container));
+}
+.md-alt-row--white .md-alt-row__piece { --alt-role-bg: var(--md-piece-light); --alt-role-fg: var(--md-piece-light-on); }
+.md-alt-row--black .md-alt-row__piece { --alt-role-bg: var(--md-piece-light-on); --alt-role-fg: var(--md-piece-light); }
+.md-alt-row__san {
+  font-family: var(--md-ref-typeface-brand);
+  font-size: 1rem;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+}
+.md-alt-row__meter {
+  height: 6px;
+  border-radius: var(--md-sys-shape-full);
+  background: color-mix(in oklab, currentColor 12%, transparent);
+  overflow: hidden;
+}
+.md-alt-row__meter-fill {
+  height: 100%;
+  width: calc(var(--share, 50) * 1%);
+  border-radius: inherit;
+  background: var(--md-sys-color-primary);
+  transform-origin: left center;
+  animation: mdMeterFill var(--md-sys-motion-slow) var(--md-sys-motion-spatial) both;
+  animation-delay: calc(var(--i, 0) * 70ms + 120ms);
+}
+@keyframes mdMeterFill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.md-alt-row__score {
+  font-family: var(--md-ref-typeface-brand);
+  font-size: 0.8125rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+  color: var(--md-sys-color-on-surface-variant);
+  white-space: nowrap;
+}
+/* Mate scores get urgency: tertiary carries "this ends the game". */
+.md-alt-row__score.is-mate { color: var(--md-sys-color-tertiary); }
+
+/* ── Verdict pop + accuracy count-up ──
+   When a fresh classification lands, the stage pops once on the spatial
+   spring and the accuracy figure counts up from 0 — motion that says
+   "measured", not decoration. The pop is suppressed for re-renders that
+   carry `data-replay="true"` (settings changes re-rendering old data). */
+.md-verdict.pop .md-verdict__stage { animation: mdVerdictPop 420ms var(--md-sys-motion-spatial); }
+@keyframes mdVerdictPop {
+  0% { transform: scale(0.96); }
+  60% { transform: scale(1.02); }
+  100% { transform: none; }
+}
+.md-balance[data-state="stale"] .eval-labels { opacity: 0.7; }
+
+/* ── Scroll-aware app bar elevation ──
+   The canvas scrolls under a static bar today. One class from JS turns on a
+   soft bottom edge + tint so content doesn't collide with the identity row. */
+.md-app.is-scrolled .md-app-bar {
+  box-shadow: 0 1px 0 var(--md-sys-color-outline-variant),
+    0 6px 18px color-mix(in oklab, var(--md-sys-color-shadow) 10%, transparent);
+  background: color-mix(in oklab, var(--md-sys-color-surface-container-low) 88%, transparent);
+  transition: box-shadow var(--md-sys-motion-med) var(--md-sys-motion-effects),
+    background-color var(--md-sys-motion-med) var(--md-sys-motion-effects);
+}
+
+/* ── Swipe/flick dismiss for toasts ── */
+.toast { touch-action: pan-y; }
+.toast.dismiss-swipe {
+  transition: transform 220ms var(--md-sys-motion-spatial), opacity 220ms var(--md-sys-motion-effects);
+  pointer-events: none;
+}
+
+/* ── Version stamp (settings sheet footer) ── */
+.md-version-stamp {
+  color: var(--md-sys-color-outline);
+  letter-spacing: 0.08em;
+  text-align: center;
+}
