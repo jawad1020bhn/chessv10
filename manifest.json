@@ -2,17 +2,18 @@
   "manifest_version": 3,
   "name": "Chess Hint Assistant",
   "short_name": "Chess Coach",
-  "version": "13.0.0",
-  "version_name": "13.0.0 (M3 Expressive — depth pass)",
+  "version": "13.1.0",
+  "version_name": "13.1.0 (Maia-3 local policy hints)",
   "author": "jawad1020bhn",
   "minimum_chrome_version": "114",
-  "description": "Cloud chess analysis workspace with verified-position handling, Ultra Super Aggressive Attack style ranking, multi-source analysis, opening explorer, and tablebases.",
+  "description": "Chess analysis workspace with verified positions, objective cloud analysis, and optional local Maia-3 human move-policy hints.",
   "permissions": [
     "sidePanel",
     "activeTab",
     "storage",
     "scripting",
-    "alarms"
+    "alarms",
+    "offscreen"
   ],
   "host_permissions": [
     "https://www.chess.com/*",
@@ -22,6 +23,9 @@
     "https://explorer.lichess.ovh/*",
     "https://tablebase.lichess.ovh/*",
     "https://chess-api.com/*"
+  ],
+  "optional_host_permissions": [
+    "https://raw.githubusercontent.com/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -38,7 +42,7 @@
     }
   },
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; connect-src https://lichess.org https://explorer.lichess.ovh https://tablebase.lichess.ovh https://chess-api.com;"
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; worker-src 'self'; connect-src 'self' https://lichess.org https://explorer.lichess.ovh https://tablebase.lichess.ovh https://chess-api.com https://raw.githubusercontent.com;"
   },
   "icons": {
     "16": "icons/icon-16.png",

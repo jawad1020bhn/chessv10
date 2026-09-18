@@ -369,6 +369,54 @@
     return '-';
   }
 
+  // ─── Maia Fair-Play Context Classification ─────────────────────────
+  // Board extraction alone cannot prove a game is safe for move assistance.
+  // Maia requests are therefore explicitly labelled as safe only for known
+  // analysis/study pages or a visible completed-game result; unknown and live
+  // routes fail closed in the background.
+  function hasCompletedGameSignal() {
+    const selectors = '.game-over, .game__meta .result, [data-test-element="game-over"], [data-cy="game-over"], .result-wrap';
+    const completedText = /\b(?:game over|checkmate|stalemate|resigned|resignation|aborted|won on time|timed? out|white wins|black wins|you won|you lost|draw (?:by|agreed|game|on|after)|drawn)\b|(?:1-0|0-1|1\/2-1\/2|½-½)/i;
+    // Some sites retain hidden end-game templates during a live game. A
+    // selector alone is not enough evidence: require a visible, explicit
+    // terminal result before classifying a normal game page as review-safe.
+    return [...document.querySelectorAll(selectors)].some(element => {
+      if (element.hidden || !element.getClientRects().length) return false;
+      const style = window.getComputedStyle?.(element);
+      if (style?.display === 'none' || style?.visibility === 'hidden') return false;
+      return completedText.test(element.textContent || '');
+    });
+  }
+
+  function classifyAnalysisEligibility(site) {
+    const pathname = window.location.pathname.toLowerCase();
+    if (site === 'lichess') {
+      if (/^\/analysis(?:\/|$)/.test(pathname)) {
+        return { allowed: true, context: 'analysis-board', reason: 'Lichess analysis board' };
+      }
+      if (/^\/study(?:\/|$)/.test(pathname)) {
+        return { allowed: true, context: 'study', reason: 'Lichess study' };
+      }
+      if (hasCompletedGameSignal()) {
+        return { allowed: true, context: 'completed-game', reason: 'Completed Lichess game' };
+      }
+      return { allowed: false, context: 'live-or-unknown', reason: 'Maia-3 is disabled on live or unverified Lichess game pages.' };
+    }
+    if (site === 'chesscom') {
+      if (pathname.includes('/analysis')) {
+        return { allowed: true, context: 'analysis-board', reason: 'Chess.com analysis board' };
+      }
+      if (pathname.includes('/library/') || pathname.includes('/lessons/')) {
+        return { allowed: true, context: 'study', reason: 'Chess.com study or lesson' };
+      }
+      if (hasCompletedGameSignal()) {
+        return { allowed: true, context: 'completed-game', reason: 'Completed Chess.com game' };
+      }
+      return { allowed: false, context: 'live-or-unknown', reason: 'Maia-3 is disabled on live or unverified Chess.com game pages.' };
+    }
+    return { allowed: false, context: 'unknown', reason: 'Maia-3 needs a recognised analysis board, study, or completed-game context.' };
+  }
+
   // ─── Main Read Board Function ─────────────────────────────────────
   function readBoard() {
     const site = detectSite();
@@ -393,6 +441,12 @@
       fenSource: result.fenSource || 'dom-placement',
       site: site,
       url: window.location.href,
+      // V1 deliberately does not infer move history from arbitrary page DOM.
+      // The selected browser model is current-position-only; callers surface
+      // this rather than fabricating an eight-ply history.
+      moveHistory: [],
+      historyQuality: 'unavailable',
+      analysisEligibility: classifyAnalysisEligibility(site),
       timestamp: Date.now()
     };
   }

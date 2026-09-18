@@ -4,7 +4,10 @@ importScripts(
   'engine/analysis-contract.js',
   'engine/analysis-policy.js',
   'engine/human-form.js',
-  'engine/local-engine.js'
+  'engine/local-engine.js',
+  'engine/maia/maia-model-manifest.js',
+  'engine/maia/maia-contract.js',
+  'engine/maia/maia-engine-client.js'
 );
 
 /**
@@ -46,7 +49,17 @@ const DEFAULT_SETTINGS = {
   // Individual analysis providers can be excluded without bypassing safeguards.
   useChessApi: true,
   useLichessCloud: true,
-  useMastersExplorer: true
+  useMastersExplorer: true,
+  // Maia is intentionally independent from objective-engine and HumanForm
+  // settings. It supplies a local learned move policy, never cloud eval/PVs.
+  analysisEngine: 'objective',
+  maiaModelId: MaiaModelManifest.DEFAULT_MODEL_ID,
+  maiaSideToMoveElo: MaiaContract.RATING_DEFAULT,
+  maiaOpponentElo: MaiaContract.RATING_DEFAULT,
+  maiaLinkRatings: true,
+  maiaHintCount: 3,
+  maiaShowHumanOutcome: true,
+  maiaAutoAnalyze: false
 };
 
 function normalizeSettings(value = {}) {
@@ -66,6 +79,7 @@ function normalizeSettings(value = {}) {
   for (const key of booleanKeys) normalized[key] = typeof migrated[key] === 'boolean' ? migrated[key] : DEFAULT_SETTINGS[key];
   const strength = Math.round(Number(migrated.sparringStrength));
   normalized.sparringStrength = Number.isFinite(strength) ? strength : DEFAULT_SETTINGS.sparringStrength;
+  Object.assign(normalized, MaiaContract.normalizeSettings(migrated, MaiaModelManifest));
   return normalized;
 }
 
@@ -73,11 +87,16 @@ function normalizeSettings(value = {}) {
 // ─── Turn-Based Analysis State Machine ────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════
 const turnState = {
+  // Keep the legacy top-level fields for existing objective UI/tests, while
+  // maintaining independent duplicate suppression for each engine semantics.
   lastAnalyzedFen: null,
+  lastAnalyzedFenByEngine: Object.create(null),
   lastAnalysisSource: null,
   isPlayerTurn: true,
   waitingForOpponent: false,
   analysisInProgress: false,
+  analysisInProgressByEngine: Object.create(null),
+  analysisInProgressCounts: Object.create(null),
   autoAnalysisPending: false,
   lastPositionUpdateTime: 0,
   consecutiveFailures: 0,
@@ -85,14 +104,19 @@ const turnState = {
 };
 
 let lastAnalysisGameId = null;
+// Request correlation is kept per tab so a late local-policy response cannot
+// overwrite a newer same-position request after settings or mode changes.
+const latestMaiaRequestByTab = new Map();
+let maiaRequestCounter = 0;
 
-function shouldAnalyzePosition(fen, playerColor) {
+function shouldAnalyzePosition(fen, playerColor, engineId = 'objective') {
   if (!fen || !playerColor) {
     return { shouldAnalyze: false, reason: 'missing_data', isPlayerTurn: false };
   }
   const activeColor = fen.split(' ')[1] || 'w';
   const isPlayerTurn = activeColor === playerColor;
-  if (ApiReliability.canonicalAnalysisFen(fen) === ApiReliability.canonicalAnalysisFen(turnState.lastAnalyzedFen)) {
+  const previousFen = turnState.lastAnalyzedFenByEngine[engineId] || null;
+  if (ApiReliability.canonicalAnalysisFen(fen) === ApiReliability.canonicalAnalysisFen(previousFen)) {
     return { shouldAnalyze: false, reason: 'same_position', isPlayerTurn };
   }
   if (!isPlayerTurn) {
@@ -105,17 +129,34 @@ function shouldAnalyzePosition(fen, playerColor) {
   return { shouldAnalyze: true, reason: 'players_turn_new_position', isPlayerTurn: true };
 }
 
-function markPositionAnalyzed(fen, source) {
-  turnState.lastAnalyzedFen = fen;
-  turnState.lastAnalysisSource = source;
+function markPositionAnalyzed(fen, source, engineId = 'objective') {
+  turnState.lastAnalyzedFenByEngine[engineId] = fen;
+  // The existing status/UI is objective-engine oriented; retain it as an
+  // observational value but never use Maia data as an objective result.
+  if (engineId === 'objective') {
+    turnState.lastAnalyzedFen = fen;
+    turnState.lastAnalysisSource = source;
+  }
+}
+
+function setAnalysisInProgress(engineId, inProgress) {
+  const current = Math.max(0, Number(turnState.analysisInProgressCounts[engineId]) || 0);
+  const next = inProgress === true ? current + 1 : Math.max(0, current - 1);
+  turnState.analysisInProgressCounts[engineId] = next;
+  turnState.analysisInProgressByEngine[engineId] = next > 0;
+  turnState.analysisInProgress = Object.values(turnState.analysisInProgressByEngine).some(Boolean);
 }
 
 function resetAnalysisState() {
   turnState.lastAnalyzedFen = null;
+  turnState.lastAnalyzedFenByEngine = Object.create(null);
+  latestMaiaRequestByTab.clear();
   turnState.lastAnalysisSource = null;
   turnState.isPlayerTurn = true;
   turnState.waitingForOpponent = false;
   turnState.analysisInProgress = false;
+  turnState.analysisInProgressByEngine = Object.create(null);
+  turnState.analysisInProgressCounts = Object.create(null);
   turnState.autoAnalysisPending = false;
   turnState.consecutiveFailures = 0;
   if (turnState.analysisDebounceTimer) {
@@ -1460,6 +1501,7 @@ async function readBoardFromActiveTab() {
 let coordinatorActiveTabId = null;
 chrome.tabs.onRemoved.addListener(tabId => {
   lastObservedFenByTab.delete(tabId);
+  latestMaiaRequestByTab.delete(String(tabId));
   positionGenerations.delete(String(tabId));
   apiCoordinator.cancelTab(tabId);
   if (coordinatorActiveTabId === tabId) coordinatorActiveTabId = null;
@@ -1471,6 +1513,107 @@ chrome.tabs.onActivated.addListener(activeInfo => {
   coordinatorActiveTabId = activeInfo.tabId;
 });
 
+// ─── Maia-3 Local Policy Routing ────────────────────────────────────
+// Maia is a learned human-move policy. It deliberately has no path through
+// the objective-provider coordinator, tablebases, HumanForm, centipawn
+// quality labels, or principal-variation rendering.
+const MAIA_SAFE_CONTEXTS = new Set(['analysis-board', 'study', 'completed-game']);
+const maiaWorkflows = new Map();
+
+function createMaiaRequestId(tabId, suppliedId) {
+  const candidate = String(suppliedId || '').trim();
+  if (/^[A-Za-z0-9._:-]{1,160}$/.test(candidate)) return candidate;
+  maiaRequestCounter += 1;
+  return `maia-${String(tabId ?? 'active')}-${Date.now()}-${maiaRequestCounter}`;
+}
+
+function isLatestMaiaRequest(tabId, requestId) {
+  return latestMaiaRequestByTab.get(String(tabId ?? 'active')) === requestId;
+}
+
+function getMaiaEligibility(gameInfo) {
+  const eligibility = gameInfo?.analysisEligibility || {};
+  const context = String(eligibility.context || eligibility.state || '');
+  if (eligibility.allowed === true && MAIA_SAFE_CONTEXTS.has(context)) {
+    return { allowed: true, context };
+  }
+  return {
+    allowed: false,
+    context: context || 'unknown',
+    reason: String(eligibility.reason || 'Maia-3 hints are available only on analysis boards, studies, or completed games.')
+  };
+}
+
+function maiaError(fen, code, message, suggestion = 'retry', requestId = '') {
+  const error = MaiaContract.makeError(fen, code, message, { suggestion });
+  error.requestId = String(requestId || '');
+  return error;
+}
+
+async function performMaiaAnalysis(fen, options = {}) {
+  const model = MaiaModelManifest.get(options.modelId);
+  const ratingContext = {
+    sideToMoveElo: MaiaContract.normalizeRating(options.sideToMoveElo),
+    opponentElo: options.linkedRatings !== false
+      ? MaiaContract.normalizeRating(options.sideToMoveElo)
+      : MaiaContract.normalizeRating(options.opponentElo),
+    linkedRatings: options.linkedRatings !== false
+  };
+  const requestId = String(options.requestId || '');
+  const key = [
+    MaiaContract.canonicalFenKey(fen), model.id, ratingContext.sideToMoveElo,
+    ratingContext.opponentElo, ratingContext.linkedRatings, MaiaContract.normalizeHintCount(options.hintCount),
+    options.showHumanOutcome !== false, requestId
+  ].join('|');
+  if (maiaWorkflows.has(key)) return maiaWorkflows.get(key);
+  const workflow = (async () => {
+    try {
+      const response = await MaiaEngineClient.predict({
+        fen,
+        requestId,
+        modelId: model.id,
+        hintCount: MaiaContract.normalizeHintCount(options.hintCount),
+        ratingContext,
+        showHumanOutcome: options.showHumanOutcome !== false,
+        historyUnavailable: options.historyUnavailable === true
+      });
+      if (!response?.ok) {
+        const detail = response?.error || {};
+        return maiaError(fen, detail.code || 'maia_unavailable', detail.message || 'Maia-3 is unavailable.', detail.suggestion || 'retry', requestId);
+      }
+      // Rebuild/validate after crossing the worker boundary. This means a
+      // malformed or stale worker message cannot become a displayed hint.
+      return MaiaContract.buildAnalysis({
+        ...response.data,
+        fen,
+        requestId,
+        model: model,
+        ratingContext,
+        history: model.history,
+        hintCount: options.hintCount,
+        showHumanOutcome: options.showHumanOutcome !== false
+      });
+    } catch (error) {
+      return maiaError(fen, 'maia_unavailable', error?.message || 'Maia-3 could not start locally.', 'retry', requestId);
+    }
+  })();
+  maiaWorkflows.set(key, workflow);
+  try {
+    return await workflow;
+  } finally {
+    if (maiaWorkflows.get(key) === workflow) maiaWorkflows.delete(key);
+  }
+}
+
+async function hasMaiaModelDownloadPermission() {
+  if (!chrome.permissions?.contains) return false;
+  try {
+    return await chrome.permissions.contains({ origins: [MaiaModelManifest.MODEL_DOWNLOAD_ORIGIN] });
+  } catch (_) {
+    return false;
+  }
+}
+
 // ─── Side Panel Management ──────────────────────────────────────────
 chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 
@@ -1478,7 +1621,62 @@ chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 // ─── Message Routing ─────────────────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  const msgType = message.type;
+  const msgType = message?.type;
+
+  // Requests addressed to the offscreen host are broadcast through the
+  // extension runtime. The background must never consume or echo them.
+  if (message?.target === 'maia-offscreen') return false;
+
+  if (msgType === 'maia_host_event') {
+    if (message.protocol !== MaiaEngineClient.PROTOCOL || sender?.id !== chrome.runtime.id) return false;
+    const data = message.data || {};
+    if (['maia-status', 'maia-progress', 'maia-error'].includes(data.type)) {
+      const panelData = data.type === 'maia-error'
+        ? { status: { state: 'error', detail: data.error?.message || 'The Maia local worker failed.', progress: 0 } }
+        : data;
+      chrome.runtime.sendMessage({ type: 'maia_status_update', data: panelData }).catch(() => {});
+    }
+    if ((data.type === 'maia-status' && ['ready', 'not-installed', 'error'].includes(data.status?.state)) || data.type === 'maia-error') {
+      MaiaEngineClient.scheduleIdleClose?.();
+    }
+    return false;
+  }
+
+  if (msgType === 'maia_get_status') {
+    const model = MaiaModelManifest.get(message.modelId);
+    MaiaEngineClient.getStatus(model.id)
+      .then(response => sendResponse({ ...response, model: { id: model.id, displayName: model.displayName, expectedBytes: model.expectedBytes, history: model.history } }))
+      .catch(error => sendResponse({ ok: false, error: { code: 'host_unavailable', message: error?.message || 'Maia local host is unavailable.', suggestion: 'retry' } }));
+    return true;
+  }
+
+  if (msgType === 'maia_install_model') {
+    const model = MaiaModelManifest.get(message.modelId);
+    hasMaiaModelDownloadPermission().then(allowed => {
+      if (!allowed) {
+        sendResponse({ ok: false, error: { code: 'permission_required', message: 'Allow the Maia model download host to install this local model.', suggestion: 'grant_permission' } });
+        return;
+      }
+      return MaiaEngineClient.install(model.id)
+        .then(response => sendResponse(response))
+        .catch(error => sendResponse({ ok: false, error: { code: 'install_unavailable', message: error?.message || 'Maia installation could not start.', suggestion: 'retry' } }));
+    }).catch(error => sendResponse({ ok: false, error: { code: 'permission_check_failed', message: error?.message || 'Could not check Maia download permission.', suggestion: 'retry' } }));
+    return true;
+  }
+
+  if (msgType === 'maia_cancel_install') {
+    MaiaEngineClient.cancelInstall(MaiaModelManifest.get(message.modelId).id)
+      .then(response => sendResponse(response))
+      .catch(error => sendResponse({ ok: false, error: { code: 'cancel_failed', message: error?.message || 'Could not cancel Maia download.', suggestion: 'retry' } }));
+    return true;
+  }
+
+  if (msgType === 'maia_remove_model') {
+    MaiaEngineClient.remove(MaiaModelManifest.get(message.modelId).id)
+      .then(response => sendResponse(response))
+      .catch(error => sendResponse({ ok: false, error: { code: 'remove_failed', message: error?.message || 'Could not remove Maia model.', suggestion: 'retry' } }));
+    return true;
+  }
 
   if (msgType === 'read_board') {
     readBoardFromActiveTab().then(result => {
@@ -1492,7 +1690,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       isPlayerTurn: turnState.isPlayerTurn,
       waitingForOpponent: turnState.waitingForOpponent,
       lastAnalyzedFen: turnState.lastAnalyzedFen,
-      analysisInProgress: turnState.analysisInProgress
+      analysisInProgress: turnState.analysisInProgress,
+      analysisInProgressByEngine: { ...turnState.analysisInProgressByEngine }
     });
     return false;
   }
@@ -1505,9 +1704,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return false;
     }
     if (message.turnReliable !== true) {
+      // Preserve the requested mode on this early fail-closed status event so
+      // a delayed Objective event cannot overwrite a newer Maia panel state.
+      const requestedEngine = MaiaContract.normalizeEngine(message.engineId);
       chrome.runtime.sendMessage({
         type: 'turn_status_update',
-        data: { isPlayerTurn: false, waitingForOpponent: false, reason: 'turn_unknown', fen: message.fen }
+        data: {
+          isPlayerTurn: false,
+          waitingForOpponent: false,
+          reason: 'turn_unknown',
+          fen: message.fen,
+          engineId: requestedEngine
+        }
       }).catch(() => {});
       sendResponse({ ok: true, turnStatus: 'turn_unknown' });
       return false;
@@ -1524,6 +1732,78 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         resetAnalysisState();
         resetCorrelationTracker();
       }
+
+      const selectedEngine = MaiaContract.normalizeEngine(message.engineId || settings.analysisEngine);
+      if (selectedEngine === MaiaContract.ENGINE_ID) {
+        const requestId = createMaiaRequestId(tabId, message.requestId);
+        latestMaiaRequestByTab.set(String(tabId), requestId);
+        const eligibility = getMaiaEligibility(message.gameInfo);
+        if (message.positionReliable !== true) {
+          const data = maiaError(message.fen, 'unreliable_position', 'Maia-3 needs a verified FEN; this board snapshot is incomplete.', 'wait', requestId);
+          chrome.runtime.sendMessage({ type: 'maia_analysis_error', data }).catch(() => {});
+          sendResponse({ ok: false, error: data.errorDetail });
+          return;
+        }
+        if (!eligibility.allowed) {
+          const data = maiaError(message.fen, 'context_blocked', eligibility.reason, 'none', requestId);
+          chrome.runtime.sendMessage({ type: 'maia_analysis_error', data }).catch(() => {});
+          sendResponse({ ok: false, error: data.errorDetail });
+          return;
+        }
+
+        const turnCheck = shouldAnalyzePosition(message.fen, assistedPlayerColor, MaiaContract.ENGINE_ID);
+        // In an already-approved review/study/completed-game context, an
+        // explicit Refresh may inspect the side to move even if that side is
+        // not the selected player. Maia predicts the FEN's side to move; this
+        // remains manual and never relaxes the live/unknown-context block.
+        const manualReviewRequest = message.refresh === true && eligibility.allowed;
+        if (!turnCheck.shouldAnalyze && !manualReviewRequest) {
+          chrome.runtime.sendMessage({
+            type: 'turn_status_update',
+            data: {
+              isPlayerTurn: turnCheck.isPlayerTurn,
+              waitingForOpponent: !turnCheck.isPlayerTurn,
+              reason: turnCheck.reason,
+              fen: message.fen,
+              playerColor: assistedPlayerColor,
+              engineId: MaiaContract.ENGINE_ID
+            }
+          }).catch(() => {});
+          sendResponse({ ok: true, turnStatus: turnCheck.reason });
+          return;
+        }
+
+        setAnalysisInProgress(MaiaContract.ENGINE_ID, true);
+        performMaiaAnalysis(message.fen, {
+          requestId,
+          modelId: settings.maiaModelId,
+          sideToMoveElo: settings.maiaSideToMoveElo,
+          opponentElo: settings.maiaOpponentElo,
+          linkedRatings: settings.maiaLinkRatings,
+          hintCount: settings.maiaHintCount,
+          showHumanOutcome: settings.maiaShowHumanOutcome,
+          historyUnavailable: message.gameInfo?.historyQuality !== 'exact'
+        }).then(maiaResult => {
+          setAnalysisInProgress(MaiaContract.ENGINE_ID, false);
+          if (!apiCoordinator.isPositionCurrent(positionToken) || !isLatestMaiaRequest(tabId, requestId)) return;
+          if (maiaResult && !maiaResult.error) {
+            markPositionAnalyzed(message.fen, MaiaContract.SOURCE, MaiaContract.ENGINE_ID);
+            turnState.consecutiveFailures = 0;
+            maiaResult.context = eligibility.context;
+            chrome.runtime.sendMessage({ type: 'maia_analysis_update', data: maiaResult }).catch(() => {});
+          } else {
+            turnState.consecutiveFailures++;
+            const data = maiaResult || maiaError(message.fen, 'maia_unavailable', 'Maia-3 is unavailable.', 'retry', requestId);
+            chrome.runtime.sendMessage({ type: 'maia_analysis_error', data }).catch(() => {});
+          }
+        });
+        sendResponse({ ok: true, engineId: MaiaContract.ENGINE_ID, requestId });
+        return;
+      }
+
+      // An objective request supersedes any outstanding local-policy request
+      // for this tab, even when both refer to the same FEN.
+      latestMaiaRequestByTab.delete(String(tabId));
 
       const effectiveHintLevel = 5;
       const quality = AnalysisPolicy.resolveQuality(settings, {
@@ -1555,7 +1835,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             waitingForOpponent: !turnCheck.isPlayerTurn,
             reason: turnCheck.reason,
             fen: message.fen,
-            playerColor: assistedPlayerColor
+            playerColor: assistedPlayerColor,
+            engineId: 'objective'
           }
         }).catch(() => {});
 
@@ -1569,7 +1850,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return;
       }
 
-      turnState.analysisInProgress = true;
+      setAnalysisInProgress('objective', true);
 
       performCloudAnalysis(message.fen, assistedPlayerColor, {
         multiPv: resolvedMultiPv,
@@ -1581,7 +1862,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         tabId,
         positionReliable: message.positionReliable === true
       }).then(cloudResult => {
-        turnState.analysisInProgress = false;
+        setAnalysisInProgress('objective', false);
         if (!apiCoordinator.isPositionCurrent(positionToken) || cloudResult?.stalePosition) return;
 
         if (cloudResult && !cloudResult.error) {
@@ -1809,9 +2090,18 @@ chrome.runtime.onInstalled.addListener(() => {
       if (s.depthTarget !== undefined) { delete s.depthTarget; updated = true; }
       if (s.cloudDepth !== undefined) { delete s.cloudDepth; updated = true; }
       if (s.correlationThreshold !== undefined) { delete s.correlationThreshold; updated = true; }
+      // The v1 browser artifact is explicitly current-position-only; an old
+      // proposed history toggle must not suggest a capability it does not have.
+      if (s.maiaUseExactHistory !== undefined) { delete s.maiaUseExactHistory; updated = true; }
       if (s.useChessApi === undefined) { s.useChessApi = true; updated = true; }
       if (s.useLichessCloud === undefined) { s.useLichessCloud = true; updated = true; }
       if (s.useMastersExplorer === undefined) { s.useMastersExplorer = true; updated = true; }
+
+      const migratedMaia = MaiaContract.normalizeSettings(s, MaiaModelManifest);
+      for (const key of ['analysisEngine', 'maiaModelId', 'maiaSideToMoveElo', 'maiaOpponentElo',
+        'maiaLinkRatings', 'maiaHintCount', 'maiaShowHumanOutcome', 'maiaAutoAnalyze']) {
+        if (s[key] !== migratedMaia[key]) { s[key] = migratedMaia[key]; updated = true; }
+      }
 
       if (updated) {
         chrome.storage.local.set({ settings: s });

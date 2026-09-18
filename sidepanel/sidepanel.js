@@ -32,6 +32,23 @@
   let isRefreshing = false;
   let refreshSafetyTimer = null;
   let humanPlanState = null;
+  let currentGameInfo = { moveHistory: [], historyQuality: 'unavailable', analysisEligibility: { allowed: false, context: 'unknown' } };
+  let lastMaiaAnalysis = null;
+  let maiaModelStatus = { state: 'unknown', progress: 0, detail: 'Checking local Maia model…', ready: false };
+  // Correlate a rendered policy with the exact panel request. FEN alone is
+  // insufficient when a user changes rating/hint settings or switches engines
+  // while a local session is still calculating the same position.
+  let maiaRequestSequence = 0;
+  let expectedMaiaRequestId = null;
+  // Do not dispatch the initial board snapshot using the default Objective
+  // setting while chrome.storage is still restoring a persisted Maia choice.
+  // This is also a privacy boundary: selecting local Maia must not race into
+  // an objective cloud request when the panel opens.
+  let settingsLoaded = false;
+  let settingsRecordLoaded = false;
+  let assistedPlayerColorLoaded = false;
+  let inferredPlayerColorNeedsPersistence = false;
+  let pendingManualRefreshBeforeSettings = false;
 
   const normalizeStyle = (style) => {
     if (style === 'normal' || style === 'aggressive' || style === 'super_ultra_aggressive') return style;
@@ -58,7 +75,17 @@
     showTablebase: true,
     useChessApi: true,
     useLichessCloud: true,
-    useMastersExplorer: true
+    useMastersExplorer: true,
+    // Separate Maia policy settings. They do not affect cloud evaluation,
+    // PV selection, HumanForm, or objective coach classifications.
+    analysisEngine: 'objective',
+    maiaModelId: window.MaiaModelManifest?.DEFAULT_MODEL_ID || 'maia3-browser-fp16',
+    maiaSideToMoveElo: 1500,
+    maiaOpponentElo: 1500,
+    maiaLinkRatings: true,
+    maiaHintCount: 3,
+    maiaShowHumanOutcome: true,
+    maiaAutoAnalyze: false
   };
 
   const STYLE_DESCRIPTIONS = {
@@ -89,6 +116,31 @@
     container.setAttribute('aria-hidden', styleAllowsSetting ? 'false' : 'true');
     checkbox.disabled = !styleAllowsSetting;
     checkbox.checked = settings.earlyKingHuntEnabled === true;
+  }
+
+  function isMaiaMode() {
+    return settings.analysisEngine === (window.MaiaContract?.ENGINE_ID || 'maia3');
+  }
+
+  function createMaiaRequestId() {
+    maiaRequestSequence += 1;
+    const uuid = window.crypto?.randomUUID?.();
+    return uuid ? `maia-panel-${uuid}` : `maia-panel-${Date.now()}-${maiaRequestSequence}`;
+  }
+
+  function invalidateExpectedMaiaRequest() {
+    maiaRequestSequence += 1;
+    expectedMaiaRequestId = null;
+  }
+
+  function maiaModel() {
+    return window.MaiaModelManifest?.get?.(settings.maiaModelId) || null;
+  }
+
+  function formatBytes(bytes) {
+    const value = Number(bytes) || 0;
+    if (value <= 0) return 'Local download required';
+    return `${(value / (1024 * 1024)).toFixed(1)} MB local download`;
   }
 
   // ─── DOM References ─────────────────────────────────────────────────
@@ -138,7 +190,29 @@
     criticalMomentSection: $('#critical-moment-section'),
     criticalMomentText: $('#critical-moment-text'),
     criticalMomentDetail: $('#critical-moment-detail'),
-    correlationStat: $('#correlation-stat')
+    correlationStat: $('#correlation-stat'),
+    maiaPanel: $('#maia-panel'),
+    maiaMoveList: $('#maia-move-list'),
+    maiaPolicyCaption: $('#maia-policy-caption'),
+    maiaModelBadge: $('#maia-model-badge'),
+    maiaOutcome: $('#maia-outcome'),
+    maiaOutcomeCaption: $('#maia-outcome-caption'),
+    maiaOutcomeWin: $('#maia-outcome-win'),
+    maiaOutcomeDraw: $('#maia-outcome-draw'),
+    maiaOutcomeLoss: $('#maia-outcome-loss'),
+    maiaHistoryNote: $('#maia-history-note'),
+    maiaPolicyWarning: $('#maia-policy-warning'),
+    maiaSettingsBlock: $('#maia-settings-block'),
+    maiaInstallState: $('#maia-install-state'),
+    maiaInstallDetail: $('#maia-install-detail'),
+    maiaInstallProgressWrap: $('#maia-install-progress-wrap'),
+    maiaInstallProgressFill: $('#maia-install-progress-fill'),
+    maiaModelName: $('#maia-model-name'),
+    maiaModelSize: $('#maia-model-size'),
+    btnMaiaInstall: $('#btn-maia-install'),
+    btnMaiaCancel: $('#btn-maia-cancel'),
+    btnMaiaRemove: $('#btn-maia-remove'),
+    toolbarModeLabel: $('#toolbar-mode-label')
   };
 
   // ─── Turn-Based State ──────────────────────────────────────────────
@@ -191,7 +265,15 @@
           positionReliable: result.positionReliable === true,
           turnReliable: result.turnReliable === true,
           fenSource: result.fenSource || 'dom-placement',
-          gameInfo: { site: result.site, url: result.url, timestamp: result.timestamp, moveHistory: [], tabId: activeTabId }
+          gameInfo: {
+            site: result.site,
+            url: result.url,
+            timestamp: result.timestamp,
+            moveHistory: Array.isArray(result.moveHistory) ? result.moveHistory : [],
+            historyQuality: result.historyQuality || 'unavailable',
+            analysisEligibility: result.analysisEligibility || { allowed: false, context: 'unknown' },
+            tabId: activeTabId
+          }
         });
       }
     } catch (e) {}
@@ -460,9 +542,10 @@
     renderMoveClassificationEmpty();
     initScrollElevation();
     initVersionStamp();
-    updateEngineStatus('connecting', 'Connecting to cloud...');
+    updateEngineStatus('connecting', isMaiaMode() ? 'Checking Maia-3 locally…' : 'Connecting to cloud...');
     updateCorrelationStat();   // initialise "0 / 0 (0%)" display
-    runHealthCheck();          // passive status only; does not call providers
+    if (isMaiaMode()) refreshMaiaModelStatus();
+    else runHealthCheck();     // passive status only; does not call providers
   }
 
   // ─── Scroll-aware app bar elevation ─────────────────────────────────
@@ -530,13 +613,18 @@
 
   function loadSettings() {
     chrome.storage.local.get('settings', (result) => {
-      if (result.settings) {
+      const storedSettings = result?.settings;
+      if (storedSettings) {
         const migrated = window.AnalysisPolicy
-          ? window.AnalysisPolicy.migrateLegacySettings(result.settings)
-          : result.settings;
+          ? window.AnalysisPolicy.migrateLegacySettings(storedSettings)
+          : storedSettings;
+        const maiaSettings = window.MaiaContract
+          ? window.MaiaContract.normalizeSettings(migrated, window.MaiaModelManifest)
+          : {};
         settings = {
           ...settings,
           ...migrated,
+          ...maiaSettings,
           style: normalizeStyle(migrated.style),
           earlyKingHuntEnabled: migrated.earlyKingHuntEnabled === true,
           analysisQuality: window.AnalysisPolicy
@@ -546,17 +634,78 @@
             ? window.AnalysisPolicy.normalizeCandidateLines(migrated.candidateLines)
             : (migrated.candidateLines || 'auto')
         };
-        applySettingsToUI();
-        if (settings.style !== result.settings.style) chrome.storage.local.set({ settings });
-        if (lastAnalysis) renderAnalysis(lastAnalysis);
+        if (settings.style !== storedSettings.style || settings.analysisEngine !== storedSettings.analysisEngine) chrome.storage.local.set({ settings });
       }
+      // A board can arrive before storage reads resolve. Only after the
+      // persisted engine selection is known may it initiate any analysis.
+      settingsRecordLoaded = true;
+      applySettingsToUI();
+      if (lastAnalysis && !isMaiaMode()) renderAnalysis(lastAnalysis);
+      if (isMaiaMode()) {
+        updateEngineStatus('connecting', 'Checking Maia-3 locally…');
+        refreshMaiaModelStatus();
+        renderMaiaEmptyState();
+      }
+      finishInitialPreferenceLoad();
     });
     chrome.storage.local.get('assistedPlayerColor', (result) => {
-      if (result.assistedPlayerColor) {
+      if (result?.assistedPlayerColor) {
         assistedPlayerColor = result.assistedPlayerColor;
+        inferredPlayerColorNeedsPersistence = false;
         updatePlayerSelectorUI();
       }
+      assistedPlayerColorLoaded = true;
+      finishInitialPreferenceLoad();
     });
+  }
+
+  function finishInitialPreferenceLoad() {
+    if (settingsLoaded || !settingsRecordLoaded || !assistedPlayerColorLoaded) return;
+    // The saved player color determines whether this is even that player's
+    // turn, so wait for it along with the engine preference before dispatch.
+    settingsLoaded = true;
+    if (inferredPlayerColorNeedsPersistence) {
+      inferredPlayerColorNeedsPersistence = false;
+      // Persist only after the real settings record has been restored; an
+      // early board observation must never overwrite a saved Maia selection.
+      saveSettings();
+    }
+    if (pendingManualRefreshBeforeSettings) {
+      pendingManualRefreshBeforeSettings = false;
+      requestAnalysis(true);
+    } else {
+      requestInitialAnalysisAfterSettingsLoad();
+    }
+  }
+
+  function requestInitialAnalysisAfterSettingsLoad() {
+    if (!currentFen || !turnReliable) return;
+    // The first position may have been classified before the saved player
+    // color arrived, so calculate the turn again from the now-final settings.
+    const activeColor = currentFen.split(' ')[1] || 'w';
+    const effectiveColor = assistedPlayerColor || playerColor || 'w';
+    isPlayerTurn = activeColor === effectiveColor;
+    waitingForOpponent = !isPlayerTurn;
+    updatePositionContext();
+    if (isMaiaMode() && currentGameInfo?.analysisEligibility?.allowed !== true) {
+      renderMaiaEmptyState();
+      updateEngineStatus('offline', 'Maia-3 is available only in recognised review contexts');
+      return;
+    }
+    if (!isPlayerTurn) {
+      updateEngineStatus('online', isMaiaMode()
+        ? "Opponent's turn: review with Maia-3 is available"
+        : "Opponent's turn: waiting...");
+      return;
+    }
+    const shouldAutoAnalyze = isMaiaMode()
+      ? (settings.maiaAutoAnalyze === true && positionReliable && currentGameInfo?.analysisEligibility?.allowed === true)
+      : settings.autoAnalyze === true;
+    if (shouldAutoAnalyze) {
+      requestAnalysis();
+      return;
+    }
+    updateEngineStatus('online', isMaiaMode() ? 'Your turn: Maia-3 ready' : 'Your turn');
   }
 
   // ─── M3E slider: custom visuals driven by the native range input ─────
@@ -612,6 +761,14 @@
       'setting-use-chess-api': settings.useChessApi,
       'setting-use-lichess-cloud': settings.useLichessCloud,
       'setting-use-masters-explorer': settings.useMastersExplorer,
+      'setting-analysis-engine': settings.analysisEngine,
+      'setting-maia-model': settings.maiaModelId,
+      'setting-maia-self-elo': settings.maiaSideToMoveElo,
+      'setting-maia-opponent-elo': settings.maiaOpponentElo,
+      'setting-maia-link-ratings': settings.maiaLinkRatings,
+      'setting-maia-hint-count': settings.maiaHintCount,
+      'setting-maia-auto-analyze': settings.maiaAutoAnalyze,
+      'setting-maia-show-outcome': settings.maiaShowHumanOutcome,
     };
     Object.entries(mapping).forEach(([id, val]) => {
       const el = $(`#${id}`);
@@ -633,8 +790,94 @@
     });
     updateStyleDescription();
     updateEarlyKingHuntUI();
+    updateEngineModeUI();
     syncExpressiveControls();
     syncAllSegments();
+  }
+
+  function updateEngineModeUI() {
+    const maia = isMaiaMode();
+    const app = document.getElementById('app');
+    if (app) app.classList.toggle('engine-maia', maia);
+    if (dom.maiaSettingsBlock) dom.maiaSettingsBlock.hidden = !maia;
+    $$('[data-objective-setting]').forEach(element => { element.hidden = maia; });
+
+    // Maia output is structurally distinct from the objective balance, PV,
+    // critical-moment, and move-classification widgets. Do not leave stale
+    // objective scores visible when the selected engine changes.
+    const objectiveSections = ['#hint-section', '#idea-section', '#alts-section', '#eval-section', '#critical-moment-section', '#move-class-section', '#position-info'];
+    objectiveSections.forEach(selector => {
+      const element = $(selector);
+      if (!element) return;
+      if (maia) element.hidden = true;
+      else element.hidden = false;
+    });
+    if (dom.maiaPanel) dom.maiaPanel.hidden = !maia;
+    if (!maia) {
+      hideIdeaRail();
+      hideAlternatives();
+    }
+    const engineDescription = $('#engine-mode-description');
+    if (engineDescription) {
+      engineDescription.textContent = maia
+        ? 'Maia-3 runs the user-installed model locally and returns likely human moves, not objective evaluation or PVs.'
+        : 'Objective analysis uses evaluation and candidate lines.';
+    }
+    if (dom.toolbarModeLabel) dom.toolbarModeLabel.textContent = maia ? 'Local Maia policy · study only' : 'Exact move · study only';
+    const opponentRow = $('#maia-opponent-rating-row');
+    if (opponentRow) opponentRow.hidden = settings.maiaLinkRatings === true;
+    const model = maiaModel();
+    if (dom.maiaModelName && model) dom.maiaModelName.textContent = model.displayName;
+    if (dom.maiaModelSize && model) dom.maiaModelSize.textContent = formatBytes(model.expectedBytes);
+    renderMaiaModelStatus(maiaModelStatus);
+  }
+
+  function renderMaiaModelStatus(status) {
+    const next = status && typeof status === 'object' ? status : maiaModelStatus;
+    maiaModelStatus = {
+      ...maiaModelStatus,
+      ...next,
+      progress: Math.max(0, Math.min(100, Number(next?.progress ?? maiaModelStatus.progress) || 0))
+    };
+    const state = maiaModelStatus.state || 'unknown';
+    const detail = maiaModelStatus.detail || 'Checking local Maia model…';
+    const labels = {
+      'not-installed': 'Not installed',
+      downloading: 'Downloading',
+      loading: 'Loading',
+      ready: 'Ready locally',
+      error: 'Needs attention',
+      unknown: 'Checking…'
+    };
+    if (dom.maiaInstallState) {
+      dom.maiaInstallState.textContent = labels[state] || state;
+      dom.maiaInstallState.dataset.state = state;
+    }
+    if (dom.maiaInstallDetail) dom.maiaInstallDetail.textContent = detail;
+    const active = state === 'downloading' || state === 'loading';
+    if (dom.maiaInstallProgressWrap) {
+      dom.maiaInstallProgressWrap.hidden = !active;
+      dom.maiaInstallProgressWrap.setAttribute('aria-valuenow', String(maiaModelStatus.progress));
+    }
+    if (dom.maiaInstallProgressFill) dom.maiaInstallProgressFill.style.width = `${maiaModelStatus.progress}%`;
+    if (dom.btnMaiaInstall) {
+      dom.btnMaiaInstall.hidden = active || state === 'ready';
+      dom.btnMaiaInstall.disabled = active;
+      dom.btnMaiaInstall.textContent = state === 'error' ? 'Download again' : 'Download model';
+    }
+    if (dom.btnMaiaCancel) dom.btnMaiaCancel.hidden = state !== 'downloading';
+    if (dom.btnMaiaRemove) dom.btnMaiaRemove.hidden = state !== 'ready';
+  }
+
+  function refreshMaiaModelStatus() {
+    const model = maiaModel();
+    if (!model) return;
+    chrome.runtime.sendMessage({ type: 'maia_get_status', modelId: model.id }).then(response => {
+      if (response?.status) renderMaiaModelStatus(response.status);
+      else if (response?.error) renderMaiaModelStatus({ state: 'error', detail: response.error.message || 'Could not check Maia model status.' });
+    }).catch(() => {
+      renderMaiaModelStatus({ state: 'error', detail: 'Could not start the Maia local host.' });
+    });
   }
 
   function syncExpressiveControls() {
@@ -732,8 +975,10 @@
         lastEngineRecommendationFen = null;
         lastEngineRecommendationUci = null;
         chrome.runtime.sendMessage({ type: 'player_color_changed' }).catch(() => {});
-        if (lastAnalysis) {
+        if (lastAnalysis && !isMaiaMode()) {
           renderAnalysis(lastAnalysis);
+        } else if (lastMaiaAnalysis && isMaiaMode()) {
+          renderMaiaAnalysis(lastMaiaAnalysis);
         }
         if (currentFen) {
           requestAnalysis();
@@ -802,6 +1047,29 @@
       'setting-use-chess-api': (v) => { settings.useChessApi = v; },
       'setting-use-lichess-cloud': (v) => { settings.useLichessCloud = v; },
       'setting-use-masters-explorer': (v) => { settings.useMastersExplorer = v; },
+      'setting-analysis-engine': (v) => {
+        settings.analysisEngine = v === (window.MaiaContract?.ENGINE_ID || 'maia3') ? 'maia3' : 'objective';
+      },
+      'setting-maia-model': (v) => {
+        settings.maiaModelId = window.MaiaModelManifest?.has?.(v) ? v : (window.MaiaModelManifest?.DEFAULT_MODEL_ID || 'maia3-browser-fp16');
+      },
+      'setting-maia-self-elo': (v) => {
+        const rating = window.MaiaContract?.normalizeRating ? window.MaiaContract.normalizeRating(v) : clamp(v, 600, 2600, 1500);
+        settings.maiaSideToMoveElo = rating;
+        if (settings.maiaLinkRatings) settings.maiaOpponentElo = rating;
+      },
+      'setting-maia-opponent-elo': (v) => {
+        settings.maiaOpponentElo = window.MaiaContract?.normalizeRating ? window.MaiaContract.normalizeRating(v) : clamp(v, 600, 2600, 1500);
+      },
+      'setting-maia-link-ratings': (v) => {
+        settings.maiaLinkRatings = v === true;
+        if (settings.maiaLinkRatings) settings.maiaOpponentElo = settings.maiaSideToMoveElo;
+      },
+      'setting-maia-hint-count': (v) => {
+        settings.maiaHintCount = window.MaiaContract?.normalizeHintCount ? window.MaiaContract.normalizeHintCount(v) : 3;
+      },
+      'setting-maia-auto-analyze': (v) => { settings.maiaAutoAnalyze = v === true; },
+      'setting-maia-show-outcome': (v) => { settings.maiaShowHumanOutcome = v === true; },
     };
 
     Object.entries(settingEls).forEach(([id, handler]) => {
@@ -812,7 +1080,7 @@
         handler(val);
         const savePromise = saveSettings();
         applySettingsToUI();
-        if ((id === 'setting-style' || id === 'setting-human-like-mode' || id === 'setting-early-king-hunt' || id === 'setting-show-threats') && lastAnalysis) {
+        if ((id === 'setting-style' || id === 'setting-human-like-mode' || id === 'setting-early-king-hunt' || id === 'setting-show-threats') && lastAnalysis && !isMaiaMode()) {
           humanPlanState = null;
           renderAnalysis(lastAnalysis);
           // Human mode changes routing policy too (steady depth, max MultiPV),
@@ -821,12 +1089,71 @@
             savePromise.finally(() => requestAnalysis(true));
           }
         }
-        if (['setting-use-chess-api', 'setting-use-lichess-cloud', 'setting-use-masters-explorer', 'setting-analysis-quality', 'setting-candidate-lines'].includes(id) && currentFen) {
+        if (id === 'setting-analysis-engine') {
+          lastEngineRecommendationFen = null;
+          lastEngineRecommendationUci = null;
+          lastMaiaAnalysis = null;
+          invalidateExpectedMaiaRequest();
+          if (isRefreshing) finishRefresh();
+          if (isMaiaMode()) {
+            refreshMaiaModelStatus();
+            renderMaiaEmptyState();
+          } else if (currentFen) {
+            savePromise.finally(() => requestAnalysis(true));
+          }
+        }
+        if (id === 'setting-maia-model' && isMaiaMode()) {
+          lastMaiaAnalysis = null;
+          invalidateExpectedMaiaRequest();
+          refreshMaiaModelStatus();
+          renderMaiaEmptyState();
+        }
+        if (isMaiaMode() && ['setting-maia-self-elo', 'setting-maia-opponent-elo', 'setting-maia-link-ratings', 'setting-maia-hint-count', 'setting-maia-show-outcome'].includes(id) && currentFen) {
+          savePromise.finally(() => requestAnalysis(true));
+        }
+        if (['setting-use-chess-api', 'setting-use-lichess-cloud', 'setting-use-masters-explorer', 'setting-analysis-quality', 'setting-candidate-lines'].includes(id) && currentFen && !isMaiaMode()) {
           // Ensure the worker sees the new source policy before it routes.
           savePromise.finally(() => requestAnalysis(true));
         }
       });
     });
+
+    if (dom.btnMaiaInstall) {
+      dom.btnMaiaInstall.addEventListener('click', async () => {
+        const model = maiaModel();
+        if (!model) return;
+        try {
+          // This request is intentionally tied to the explicit Download click.
+          // The model host is optional permission rather than broad startup I/O.
+          const granted = await chrome.permissions.request({ origins: [window.MaiaModelManifest.MODEL_DOWNLOAD_ORIGIN] });
+          if (!granted) {
+            renderMaiaModelStatus({ state: 'error', detail: 'Download permission was not granted. Maia stays local until you allow its approved model host.' });
+            return;
+          }
+          renderMaiaModelStatus({ state: 'downloading', progress: 0, detail: 'Starting Maia model download…' });
+          const response = await chrome.runtime.sendMessage({ type: 'maia_install_model', modelId: model.id });
+          if (response?.ok === false) {
+            renderMaiaModelStatus({ state: 'error', detail: response.error?.message || 'Maia installation could not start.' });
+          }
+        } catch (error) {
+          renderMaiaModelStatus({ state: 'error', detail: error?.message || 'Could not request Maia model permission.' });
+        }
+      });
+    }
+    if (dom.btnMaiaCancel) {
+      dom.btnMaiaCancel.addEventListener('click', () => {
+        const model = maiaModel();
+        if (!model) return;
+        chrome.runtime.sendMessage({ type: 'maia_cancel_install', modelId: model.id }).catch(() => {});
+      });
+    }
+    if (dom.btnMaiaRemove) {
+      dom.btnMaiaRemove.addEventListener('click', () => {
+        const model = maiaModel();
+        if (!model) return;
+        chrome.runtime.sendMessage({ type: 'maia_remove_model', modelId: model.id }).catch(() => {});
+      });
+    }
 
     chrome.runtime.onMessage.addListener(handleMessage);
 
@@ -962,6 +1289,15 @@
       case 'analysis_error':
         handleAnalysisError(message.data);
         break;
+      case 'maia_analysis_update':
+        handleMaiaAnalysisResult(message.data);
+        break;
+      case 'maia_analysis_error':
+        handleMaiaAnalysisError(message.data);
+        break;
+      case 'maia_status_update':
+        handleMaiaStatusUpdate(message.data);
+        break;
       case 'turn_status_update':
         handleTurnStatusUpdate(message.data);
         break;
@@ -996,6 +1332,13 @@
   function handlePositionUpdate(message) {
     const prevFen = currentFen;
     currentFen = message.fen;
+    currentGameInfo = {
+      ...currentGameInfo,
+      ...(message.gameInfo || {}),
+      moveHistory: Array.isArray(message.gameInfo?.moveHistory) ? message.gameInfo.moveHistory : [],
+      historyQuality: message.gameInfo?.historyQuality || 'unavailable',
+      analysisEligibility: message.gameInfo?.analysisEligibility || { allowed: false, context: 'unknown' }
+    };
     if (prevFen && prevFen !== currentFen) {
       lastPositionFen = prevFen;
     }
@@ -1007,7 +1350,14 @@
     if (assistedPlayerColor === null) {
       assistedPlayerColor = playerColor;
       updatePlayerSelectorUI();
-      saveSettings();
+      if (settingsLoaded) {
+        saveSettings();
+      } else {
+        // Storage may still contain a persisted engine/color choice. Defer the
+        // inferred-color write until both records have been restored so it
+        // cannot write the default Objective settings over a saved Maia mode.
+        inferredPlayerColorNeedsPersistence = true;
+      }
     }
     if (prevFen && currentFen && isNewGame(prevFen, currentFen)) {
       evalHistory = [];
@@ -1029,6 +1379,7 @@
       lastEngineRecommendationFen = null;
       lastEngineRecommendationUci = null;
       humanPlanState = null;
+      lastMaiaAnalysis = null;
     }
 
     // Turn-based analysis — check whose turn it is before analyzing
@@ -1039,6 +1390,8 @@
     waitingForOpponent = !isPlayerTurn;
     turnJustChanged = !wasPlayerTurn && isPlayerTurn; // Turn just changed to player's turn
     updatePositionContext();
+    if (positionChanged) invalidateExpectedMaiaRequest();
+    if (isMaiaMode() && positionChanged) renderMaiaEmptyState();
 
     // Detect that the player just moved (transition
     // from "player's turn" to "opponent's turn" while we had a stored engine
@@ -1056,25 +1409,47 @@
       isPlayerTurn = false;
       waitingForOpponent = false;
       updateEngineStatus('unknown', 'Turn unavailable: waiting for a verified position');
+      if (isMaiaMode()) renderMaiaEmptyState('Turn information is unavailable for this board.');
       if (dom.hintText) dom.hintText.textContent = 'Turn information is unavailable for this board.';
       if (dom.hintFromTo) dom.hintFromTo.style.display = 'none';
       hideIdeaRail();
       return;
     }
 
+    if (isMaiaMode() && currentGameInfo?.analysisEligibility?.allowed !== true) {
+      renderMaiaEmptyState();
+      updateEngineStatus('offline', 'Maia-3 is available only in recognised review contexts');
+      return;
+    }
+
     if (isPlayerTurn) {
-      // It's the player's turn — request analysis
-      if (positionChanged && (settings.autoAnalyze || turnJustChanged)) {
+      // Objective analysis keeps its existing turn-change behavior. Maia is
+      // intentionally manual by default and only auto-runs if its own setting
+      // is enabled, avoiding accidental objective-cloud routing.
+      const shouldAutoAnalyze = isMaiaMode()
+        ? (settings.maiaAutoAnalyze === true && positionReliable && currentGameInfo?.analysisEligibility?.allowed === true)
+        : (settings.autoAnalyze || turnJustChanged);
+      // Hold the initial board until persisted settings are loaded. Otherwise
+      // the default Objective value could send a cloud request before a saved
+      // Maia selection is restored.
+      const canAutoAnalyze = settingsLoaded && shouldAutoAnalyze;
+      if (positionChanged && canAutoAnalyze) {
         requestAnalysis();
       }
-      updateEngineStatus(wasPlayerTurn ? 'online' : 'analyzing', turnJustChanged ? 'Your turn: analyzing...' : 'Your turn');
+      const readyText = isMaiaMode() ? 'Your turn: Maia-3 ready' : 'Your turn';
+      updateEngineStatus(wasPlayerTurn ? 'online' : (canAutoAnalyze ? 'analyzing' : 'online'), turnJustChanged && canAutoAnalyze ? 'Your turn: analyzing...' : readyText);
     } else {
-      // It's the opponent's turn — show waiting status, no API calls
-      const playerLabel = effectiveColor === 'w' ? 'White' : 'Black';
-      updateEngineStatus('online', `Opponent's turn: waiting...`);
-      if (dom.hintText && !lastAnalysis) {
-        dom.hintText.textContent = `Waiting for opponent's move...`;
-        if (dom.hintFromTo) dom.hintFromTo.style.display = 'none';
+      // Automatic analysis remains tied to the selected player's turn. In a
+      // safe review/study context, Maia's explicit Refresh can still inspect
+      // the FEN side to move without turning on any live-game assistance.
+      if (isMaiaMode()) {
+        updateEngineStatus('online', "Opponent's turn: review with Maia-3 is available");
+      } else {
+        updateEngineStatus('online', `Opponent's turn: waiting...`);
+        if (dom.hintText && !lastAnalysis) {
+          dom.hintText.textContent = `Waiting for opponent's move...`;
+          if (dom.hintFromTo) dom.hintFromTo.style.display = 'none';
+        }
       }
     }
   }
@@ -1128,6 +1503,12 @@
   // Handle turn status updates from background script
   function handleTurnStatusUpdate(data) {
     if (!data) return;
+    const eventEngine = data.engineId || '';
+    const maiaEngineId = window.MaiaContract?.ENGINE_ID || 'maia3';
+    // Turn-status messages can arrive after a mode switch. Ignore explicitly
+    // tagged state from the other engine so it cannot cancel/render over a
+    // newer Maia or Objective request for the same board.
+    if (eventEngine && ((isMaiaMode() && eventEngine !== maiaEngineId) || (!isMaiaMode() && eventEngine !== 'objective'))) return;
     isPlayerTurn = data.isPlayerTurn;
     waitingForOpponent = data.waitingForOpponent;
     if (data.reason === 'turn_unknown') turnReliable = false;
@@ -1135,8 +1516,21 @@
 
     if (data.reason === 'turn_unknown') {
       updateEngineStatus('unknown', 'Turn unavailable: waiting for a verified position');
+      if (isMaiaMode()) renderMaiaEmptyState('Turn information is unavailable for this board.');
       if (dom.hintText) dom.hintText.textContent = 'Turn information is unavailable for this board.';
       if (dom.hintFromTo) dom.hintFromTo.style.display = 'none';
+      return;
+    }
+
+    if (isMaiaMode()) {
+      invalidateExpectedMaiaRequest();
+      if (isRefreshing) finishRefresh();
+      if (isPlayerTurn) {
+        updateEngineStatus('online', 'Your turn: Maia-3 ready');
+      } else {
+        updateEngineStatus('online', "Opponent's turn: review with Maia-3 is available");
+        renderMaiaEmptyState('Press Refresh to inspect likely moves for the side to move.');
+      }
       return;
     }
 
@@ -1163,7 +1557,7 @@
   }
 
   function handleAnalysisResult(data) {
-    if (!data || !currentFen) return;
+    if (isMaiaMode() || !data || !currentFen) return;
     // A slower cloud response for an earlier position must never overwrite the
     // current board. Compare placement + turn because reconstructed counters
     // may legitimately differ between the request and the next poll.
@@ -1249,7 +1643,7 @@
   }
 
   function handleAnalysisError(data) {
-    if (!data) return;
+    if (isMaiaMode() || !data) return;
     if (data.fen && currentFen && data.fen.split(' ').slice(0, 4).join(' ') !== currentFen.split(' ').slice(0, 4).join(' ')) return;
     const errorMsg = data.error || 'Cloud analysis unavailable.';
     if (isRefreshing) finishRefresh();
@@ -1265,8 +1659,157 @@
     hideIdeaRail();
   }
 
+  function renderMaiaEmptyState(reason = '') {
+    if (!isMaiaMode() || !dom.maiaPanel) return;
+    dom.maiaPanel.hidden = false;
+    if (dom.maiaMoveList) dom.maiaMoveList.replaceChildren();
+    if (dom.maiaOutcome) dom.maiaOutcome.hidden = true;
+    if (dom.maiaPolicyWarning) dom.maiaPolicyWarning.hidden = true;
+    const eligibility = currentGameInfo?.analysisEligibility || {};
+    const text = reason || (!positionReliable
+      ? 'Maia-3 needs a verified FEN before it can form a legal local move policy.'
+      : eligibility.allowed !== true
+        ? (eligibility.reason || 'Maia-3 is available only on an analysis board, study, or completed game.')
+        : maiaModelStatus.state !== 'ready'
+          ? 'Download the Maia-3 model in Settings to enable local likely-move hints.'
+          : 'Press Refresh to ask Maia-3 for likely moves for the side to move at your rating context.');
+    if (dom.maiaPolicyCaption) dom.maiaPolicyCaption.textContent = text;
+    if (dom.maiaHistoryNote) dom.maiaHistoryNote.textContent = 'This browser model uses the current position only; no game history is fabricated.';
+  }
+
+  function renderMaiaPending() {
+    if (!isMaiaMode()) return;
+    if (dom.maiaPanel) dom.maiaPanel.hidden = false;
+    if (dom.maiaMoveList) dom.maiaMoveList.replaceChildren();
+    if (dom.maiaPolicyCaption) dom.maiaPolicyCaption.textContent = 'Building a legal likely-move policy locally…';
+    if (dom.maiaOutcome) dom.maiaOutcome.hidden = true;
+    if (dom.maiaPolicyWarning) dom.maiaPolicyWarning.hidden = true;
+  }
+
+  function maiaPercent(value) {
+    const percent = Math.max(0, Math.min(100, Number(value) * 100));
+    return percent < 10 ? `${percent.toFixed(1)}%` : `${Math.round(percent)}%`;
+  }
+
+  function renderMaiaAnalysis(data) {
+    if (!isMaiaMode() || !data) return;
+    if (dom.maiaPanel) dom.maiaPanel.hidden = false;
+    const modelName = data.model?.displayName || 'Maia-3';
+    if (dom.maiaModelBadge) dom.maiaModelBadge.textContent = modelName;
+    if (dom.maiaPolicyCaption) {
+      const rating = data.ratingContext || {};
+      const opponents = rating.linkedRatings ? 'same opponent rating' : `opponent ${rating.opponentElo}`;
+      dom.maiaPolicyCaption.textContent = `Likely moves for side to move ${rating.sideToMoveElo || '—'} vs ${opponents}. Probabilities are normalized over legal moves only.`;
+    }
+    if (dom.maiaMoveList) {
+      dom.maiaMoveList.replaceChildren();
+      for (const [index, move] of (data.moves || []).entries()) {
+        const item = document.createElement('li');
+        item.className = 'maia-move';
+        item.style.setProperty('--maia-index', String(index));
+        const rank = document.createElement('span');
+        rank.className = 'maia-move__rank';
+        rank.textContent = String(move.rank || index + 1);
+        const main = document.createElement('span');
+        main.className = 'maia-move__main';
+        const san = document.createElement('strong');
+        san.className = 'maia-move__san';
+        let sanText = move.uci;
+        try {
+          sanText = window.ChessHintEngine?.uciToSan?.(move.uci, data.fen) || move.uci;
+        } catch (_) {}
+        san.textContent = sanText;
+        const uci = document.createElement('span');
+        uci.className = 'maia-move__uci';
+        uci.textContent = move.uci;
+        main.append(san, uci);
+        const probability = document.createElement('span');
+        probability.className = 'maia-move__probability';
+        probability.textContent = maiaPercent(move.probability);
+        probability.setAttribute('aria-label', `${maiaPercent(move.probability)} likely`);
+        item.append(rank, main, probability);
+        dom.maiaMoveList.appendChild(item);
+      }
+    }
+    const outcome = data.humanOutcome;
+    if (dom.maiaOutcome) dom.maiaOutcome.hidden = !outcome;
+    if (outcome) {
+      if (dom.maiaOutcomeCaption) {
+        dom.maiaOutcomeCaption.textContent = `${maiaPercent(outcome.win)} win · ${maiaPercent(outcome.draw)} draw · ${maiaPercent(outcome.loss)} loss for the side to move. This is a learned human outcome tendency, not an engine evaluation.`;
+      }
+      if (dom.maiaOutcomeWin) dom.maiaOutcomeWin.style.width = `${Math.max(0, Math.min(100, outcome.win * 100))}%`;
+      if (dom.maiaOutcomeDraw) dom.maiaOutcomeDraw.style.width = `${Math.max(0, Math.min(100, outcome.draw * 100))}%`;
+      if (dom.maiaOutcomeLoss) dom.maiaOutcomeLoss.style.width = `${Math.max(0, Math.min(100, outcome.loss * 100))}%`;
+    }
+    if (dom.maiaHistoryNote) {
+      const history = data.history || {};
+      const note = history.detail || (history.mode === 'current-position-model'
+        ? 'This browser model uses the current position only.'
+        : 'Model history context is unavailable.');
+      dom.maiaHistoryNote.textContent = `${note} No history was fabricated by the extension.`;
+    }
+    if (dom.maiaPolicyWarning) {
+      const warnings = Array.isArray(data.warnings) ? data.warnings.filter(Boolean) : [];
+      dom.maiaPolicyWarning.hidden = warnings.length === 0;
+      dom.maiaPolicyWarning.textContent = warnings.join(' ');
+    }
+  }
+
+  function handleMaiaAnalysisResult(data) {
+    if (!isMaiaMode() || !data || !currentFen) return;
+    const resultKey = (data.fen || '').split(' ').slice(0, 4).join(' ');
+    const currentKey = currentFen.split(' ').slice(0, 4).join(' ');
+    const responseRequestId = String(data.requestId || '');
+    if (!resultKey || resultKey !== currentKey || !expectedMaiaRequestId || responseRequestId !== expectedMaiaRequestId) return;
+    if (data.error) {
+      handleMaiaAnalysisError(data);
+      return;
+    }
+    expectedMaiaRequestId = null;
+    lastMaiaAnalysis = data;
+    updateEngineStatus('online', `Maia-3 policy ready · ${(data.elapsedMs || 0) ? `${Math.max(1, Math.round(data.elapsedMs))} ms` : 'local'}`);
+    renderMaiaAnalysis(data);
+    if (isRefreshing) finishRefresh();
+  }
+
+  function handleMaiaAnalysisError(data) {
+    if (!isMaiaMode() || !data) return;
+    if (data.fen && currentFen && data.fen.split(' ').slice(0, 4).join(' ') !== currentFen.split(' ').slice(0, 4).join(' ')) return;
+    const responseRequestId = String(data.requestId || '');
+    if (!expectedMaiaRequestId || responseRequestId !== expectedMaiaRequestId) return;
+    expectedMaiaRequestId = null;
+    const detail = data.errorDetail || data.error || {};
+    const message = typeof detail === 'string' ? detail : (detail.message || 'Maia-3 is unavailable.');
+    if (dom.maiaPanel) dom.maiaPanel.hidden = false;
+    if (dom.maiaMoveList) dom.maiaMoveList.replaceChildren();
+    if (dom.maiaPolicyCaption) dom.maiaPolicyCaption.textContent = message;
+    if (dom.maiaOutcome) dom.maiaOutcome.hidden = true;
+    if (dom.maiaPolicyWarning) {
+      dom.maiaPolicyWarning.hidden = false;
+      dom.maiaPolicyWarning.textContent = detail.suggestion === 'install'
+        ? 'Download the local model in Settings, then Refresh.'
+        : (detail.suggestion === 'wait' ? 'Wait for a verified board position, then try again.' : 'Use Settings to check the local model, then try again.');
+    }
+    updateEngineStatus('error', message);
+    if (isRefreshing) finishRefresh();
+    showToast(message, 'error', 4000);
+  }
+
+  function handleMaiaStatusUpdate(data) {
+    const status = data?.status || data;
+    if (!status || typeof status !== 'object') return;
+    renderMaiaModelStatus(status);
+    if (isMaiaMode() && status.state === 'ready' && !lastMaiaAnalysis) renderMaiaEmptyState();
+    if (isMaiaMode() && ['not-installed', 'error'].includes(status.state)) {
+      lastMaiaAnalysis = null;
+      invalidateExpectedMaiaRequest();
+      renderMaiaEmptyState(status.state === 'error' ? (status.detail || 'Maia-3 needs attention.') : 'Download the Maia-3 model in Settings to enable local likely-move hints.');
+    }
+    if (isMaiaMode() && status.state === 'error') updateEngineStatus('error', status.detail || 'Maia-3 needs attention.');
+  }
+
   function handleOpeningDataUpdate(data) {
-    if (!data || !data.openingData) return;
+    if (isMaiaMode() || !data || !data.openingData) return;
     // Update opening data in last analysis if we have it
     if (lastAnalysis && lastAnalysis.fen === data.fen) {
       lastAnalysis.openingData = data.openingData;
@@ -1279,13 +1822,37 @@
   // ─── Request Analysis ──────────────────────────────────────────────
   function requestAnalysis(refresh = false) {
     if (!currentFen) return;
-    updateEngineStatus('analyzing', refresh ? 'Refreshing...' : 'Analyzing...');
-    setBalanceLoadingState(prevEval !== null);
+    if (!settingsLoaded) {
+      // Preserve an explicit user Refresh, but never infer an engine choice
+      // from the default settings before persisted preferences are available.
+      pendingManualRefreshBeforeSettings = pendingManualRefreshBeforeSettings || refresh === true;
+      return;
+    }
+    const maia = isMaiaMode();
+    if (maia && currentGameInfo?.analysisEligibility?.allowed !== true) {
+      renderMaiaEmptyState();
+      updateEngineStatus('offline', 'Maia-3 is available only in recognised review contexts');
+      return;
+    }
+    const requestId = maia ? createMaiaRequestId() : '';
+    if (maia) expectedMaiaRequestId = requestId;
+    updateEngineStatus('analyzing', maia
+      ? (refresh ? 'Refreshing Maia-3 locally…' : 'Running Maia-3 locally…')
+      : (refresh ? 'Refreshing...' : 'Analyzing...'));
+    if (maia) {
+      renderMaiaPending();
+    } else {
+      setBalanceLoadingState(prevEval !== null);
+    }
     const colorToSend = assistedPlayerColor || playerColor || 'w';
     chrome.runtime.sendMessage({
       type: 'request_analysis',
       fen: currentFen,
       playerColor: colorToSend,
+      // Background ignores objective options in Maia mode; sending an explicit
+      // engine selection lets it dispatch without any cloud analysis fallback.
+      engineId: maia ? 'maia3' : 'objective',
+      requestId,
       multiPv: window.AnalysisPolicy
         ? window.AnalysisPolicy.resolveMultiPv(settings, { earlyKingHunt: isEarlyKingHuntActive() })
         : 3,
@@ -1293,12 +1860,25 @@
       refresh: refresh,
       tabId: activeTabId,
       positionReliable,
-      turnReliable
-    }).catch(() => {});
+      turnReliable,
+      gameInfo: currentGameInfo
+    }).catch(error => {
+      if (!maia || expectedMaiaRequestId !== requestId) return;
+      handleMaiaAnalysisError({
+        fen: currentFen,
+        requestId,
+        errorDetail: {
+          code: 'background_unavailable',
+          message: error?.message || 'Could not start Maia-3 locally.',
+          suggestion: 'retry'
+        }
+      });
+    });
   }
 
   // ─── Render Analysis ───────────────────────────────────────────────
   function renderAnalysis(data) {
+    if (isMaiaMode()) return;
     const effectiveColor = assistedPlayerColor || playerColor || 'w';
     const objectivePvs = data.pvs || [];
     const earlyKingHuntActive = isEarlyKingHuntActive();
@@ -1472,7 +2052,8 @@
     dom.settingsPanel.style.display = 'flex';
     // The sheet was hidden, so its segmented groups measured as zero.
     requestAnimationFrame(() => requestAnimationFrame(syncAllSegments));
-    runHealthCheck();
+    if (isMaiaMode()) refreshMaiaModelStatus();
+    else runHealthCheck();
   }
 
   function closeSettingsSheet() {

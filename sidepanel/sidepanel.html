@@ -94,6 +94,30 @@
         <div id="alts-list" class="md-alts__list"></div>
       </section>
 
+      <section id="maia-panel" class="maia-panel md-card" hidden aria-label="Maia-3 likely moves">
+        <header class="maia-panel__head">
+          <div>
+            <p class="md-typescale-label-md maia-panel__eyebrow">Learned move policy</p>
+            <h2 class="md-typescale-title-sm">Likely human moves</h2>
+          </div>
+          <span id="maia-model-badge" class="maia-model-badge">Maia-3</span>
+        </header>
+        <p id="maia-policy-caption" class="maia-panel__caption">Choose a board to see the moves Maia-3 finds most likely for this rating context.</p>
+        <p class="maia-panel__disclosure">Maia-3 predicts likely human moves, not an objective engine evaluation.</p>
+        <ol id="maia-move-list" class="maia-move-list" aria-live="polite"></ol>
+        <div id="maia-outcome" class="maia-outcome" hidden>
+          <p class="md-typescale-label-md maia-outcome__title">Human outcome tendency</p>
+          <p id="maia-outcome-caption" class="maia-outcome__caption"></p>
+          <div class="maia-outcome__bar" aria-hidden="true">
+            <span id="maia-outcome-win" class="maia-outcome__seg maia-outcome__seg--win"></span>
+            <span id="maia-outcome-draw" class="maia-outcome__seg maia-outcome__seg--draw"></span>
+            <span id="maia-outcome-loss" class="maia-outcome__seg maia-outcome__seg--loss"></span>
+          </div>
+        </div>
+        <p id="maia-history-note" class="maia-history-note"></p>
+        <p id="maia-policy-warning" class="maia-policy-warning" hidden></p>
+      </section>
+
       <section id="eval-section" class="md-balance" aria-label="Position evaluation" data-lean="even" data-state="empty">
         <span class="md-balance__orb md-balance__orb--a" aria-hidden="true"></span>
         <span class="md-balance__orb md-balance__orb--b" aria-hidden="true"></span>
@@ -156,7 +180,7 @@
     </main>
 
     <footer class="md-toolbar" role="contentinfo">
-      <div class="md-toolbar__label md-typescale-label-md">Exact move · study only</div>
+      <div id="toolbar-mode-label" class="md-toolbar__label md-typescale-label-md">Exact move · study only</div>
       <button id="btn-refresh" class="md-fab" type="button" title="Refresh analysis (R)" aria-label="Refresh analysis">
         <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path fill="currentColor" d="M17.65 6.35A7.95 7.95 0 0 0 12 4a8 8 0 1 0 7.45 5.1h-2.21A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35Z"/></svg>
       </button>
@@ -174,7 +198,101 @@
       </header>
 
       <div class="md-sheet__body settings-body">
-        <section class="md-settings-block" aria-labelledby="set-play">
+        <section class="md-settings-block engine-selector-block" aria-labelledby="set-engine">
+          <h3 id="set-engine" class="md-typescale-title-sm">Analysis engine</h3>
+          <label class="visually-hidden" for="setting-analysis-engine">Analysis engine</label>
+          <select id="setting-analysis-engine" class="visually-hidden">
+            <option value="objective" selected>Objective analysis</option>
+            <option value="maia3">Maia-3 likely moves</option>
+          </select>
+          <div class="md-choice-stack" role="radiogroup" aria-label="Analysis engine">
+            <button type="button" class="md-choice" data-expressive-setting="setting-analysis-engine" data-value="objective" role="radio" aria-checked="true">
+              <span class="md-choice__title">Objective</span>
+              <span class="md-choice__sub">Cloud evaluation, lines, and coach tools</span>
+            </button>
+            <button type="button" class="md-choice" data-expressive-setting="setting-analysis-engine" data-value="maia3" role="radio" aria-checked="false">
+              <span class="md-choice__title">Maia-3</span>
+              <span class="md-choice__sub">Local likely-move policy at your rating</span>
+            </button>
+          </div>
+          <p id="engine-mode-description" class="md-help">Objective analysis uses evaluation and candidate lines.</p>
+        </section>
+
+        <section id="maia-settings-block" class="md-settings-block maia-settings-block" aria-labelledby="set-maia" hidden>
+          <h3 id="set-maia" class="md-typescale-title-sm">Maia-3 settings</h3>
+          <label class="md-field-label" for="setting-maia-model">Model build</label>
+          <select id="setting-maia-model" class="maia-select">
+            <option value="maia3-browser-fp16">Maia-3 browser model · pinned v3</option>
+          </select>
+          <div class="maia-install-card">
+            <div class="maia-install-card__head">
+              <div>
+                <p id="maia-model-name" class="md-switch-row__title">Maia-3 browser model</p>
+                <p id="maia-model-size" class="md-help">Local download required</p>
+              </div>
+              <span id="maia-install-state" class="maia-install-state">Checking…</span>
+            </div>
+            <div id="maia-install-progress-wrap" class="maia-install-progress" hidden role="progressbar" aria-label="Model download progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+              <span id="maia-install-progress-fill" class="maia-install-progress__fill"></span>
+            </div>
+            <p id="maia-install-detail" class="md-help" role="status" aria-live="polite">Checking local model status…</p>
+            <div class="md-btn-row maia-install-actions">
+              <button id="btn-maia-install" type="button" class="md-btn md-btn--tonal">Download model</button>
+              <button id="btn-maia-cancel" type="button" class="md-btn md-btn--outlined" hidden>Cancel</button>
+              <button id="btn-maia-remove" type="button" class="md-btn md-btn--outlined" hidden>Remove</button>
+            </div>
+          </div>
+
+          <label class="md-field-label" for="setting-maia-self-elo">Side to move rating</label>
+          <input id="setting-maia-self-elo" class="maia-number-input" type="number" min="600" max="2600" step="50" value="1500" inputmode="numeric">
+          <div class="md-switch-row maia-link-ratings">
+            <div>
+              <p class="md-switch-row__title">Use the same opponent rating</p>
+              <p class="md-help">Maia conditions its policy on both ratings.</p>
+            </div>
+            <label class="md-switch">
+              <input type="checkbox" id="setting-maia-link-ratings" checked>
+              <span class="md-switch__track" aria-hidden="true"><span class="md-switch__thumb"></span></span>
+              <span class="visually-hidden">Use the same opponent rating</span>
+            </label>
+          </div>
+          <div id="maia-opponent-rating-row">
+            <label class="md-field-label" for="setting-maia-opponent-elo">Opponent rating</label>
+            <input id="setting-maia-opponent-elo" class="maia-number-input" type="number" min="600" max="2600" step="50" value="1500" inputmode="numeric">
+          </div>
+
+          <label class="md-field-label" for="setting-maia-hint-count">Likely moves to show</label>
+          <select id="setting-maia-hint-count" class="maia-select">
+            <option value="1">1 move</option>
+            <option value="3" selected>3 moves</option>
+            <option value="5">5 moves</option>
+          </select>
+          <div class="md-switch-row">
+            <div>
+              <p class="md-switch-row__title">Analyze on my turn</p>
+              <p class="md-help">Local Maia requests remain manual unless you turn this on.</p>
+            </div>
+            <label class="md-switch">
+              <input type="checkbox" id="setting-maia-auto-analyze">
+              <span class="md-switch__track" aria-hidden="true"><span class="md-switch__thumb"></span></span>
+              <span class="visually-hidden">Analyze with Maia on my turn</span>
+            </label>
+          </div>
+          <div class="md-switch-row">
+            <div>
+              <p class="md-switch-row__title">Show human outcome tendency</p>
+              <p class="md-help">A learned win, draw, loss tendency — not an engine evaluation.</p>
+            </div>
+            <label class="md-switch">
+              <input type="checkbox" id="setting-maia-show-outcome" checked>
+              <span class="md-switch__track" aria-hidden="true"><span class="md-switch__thumb"></span></span>
+              <span class="visually-hidden">Show human outcome tendency</span>
+            </label>
+          </div>
+          <p class="maia-history-settings-note">This browser model uses the current position only. The extension does not invent game history.</p>
+        </section>
+
+        <section class="md-settings-block" data-objective-setting aria-labelledby="set-play">
           <h3 id="set-play" class="md-typescale-title-sm">How you want to play</h3>
 
           <label class="visually-hidden" for="setting-style">Style</label>
@@ -244,7 +362,7 @@
           </div>
         </section>
 
-        <section class="md-settings-block" aria-labelledby="set-think">
+        <section class="md-settings-block" data-objective-setting aria-labelledby="set-think">
           <h3 id="set-think" class="md-typescale-title-sm">How hard to think</h3>
           <p id="human-thinking-note" class="md-help" hidden>Managed by Human mode: steady club-strength calculation and a wide candidate pool for realistic play.</p>
           <label class="visually-hidden" for="setting-analysis-quality">Analysis quality</label>
@@ -279,7 +397,7 @@
           </div>
         </section>
 
-        <section class="md-settings-block" aria-labelledby="set-show">
+        <section class="md-settings-block" data-objective-setting aria-labelledby="set-show">
           <h3 id="set-show" class="md-typescale-title-sm">What to show</h3>
           <div class="md-switch-row">
             <div>
@@ -310,7 +428,7 @@
           </div>
         </section>
 
-        <section class="md-settings-block" aria-labelledby="set-sources">
+        <section class="md-settings-block" data-objective-setting aria-labelledby="set-sources">
           <h3 id="set-sources" class="md-typescale-title-sm">Analysis sources</h3>
           <div class="md-switch-row">
             <div><p class="md-switch-row__title">Chess-API.com</p></div>
@@ -341,7 +459,7 @@
           </div>
         </section>
 
-        <section class="md-settings-block" aria-labelledby="set-health">
+        <section class="md-settings-block" data-objective-setting aria-labelledby="set-health" id="objective-health-settings">
           <h3 id="set-health" class="md-typescale-title-sm">Provider pulse</h3>
           <div id="api-health-status" class="md-health">
             <div class="md-health__row"><span>Chess-API.com</span><span id="health-chessapi" class="api-status unknown">No recent data</span></div>
@@ -397,7 +515,7 @@
           </div>
         </section>
 
-        <p class="md-disclaimer">Request protection is always on: caching, quotas, cooldowns, and stale fallback cannot be disabled.</p>
+        <p class="md-disclaimer" data-objective-setting>Request protection is always on: caching, quotas, cooldowns, and stale fallback cannot be disabled.</p>
         <p class="md-version-stamp md-typescale-label-md" id="app-version-stamp"></p>
       </div>
     </div>
@@ -406,6 +524,8 @@
   <script src="../engine/core-utils.js"></script>
   <script src="../engine/analysis-contract.js"></script>
   <script src="../engine/analysis-policy.js"></script>
+  <script src="../engine/maia/maia-model-manifest.js"></script>
+  <script src="../engine/maia/maia-contract.js"></script>
   <script src="../engine/human-form.js"></script>
   <script src="../engine/chaos-attack.js"></script>
   <script src="../engine/early-king-hunt.js"></script>
