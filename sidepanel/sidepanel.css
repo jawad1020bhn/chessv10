@@ -2149,3 +2149,195 @@ kbd {
   letter-spacing: 0.08em;
   text-align: center;
 }
+
+/* ── Maia-3 local policy UI ──────────────────────────────────────────
+   Maia has its own visual language because it communicates likelihoods, not
+   centipawns or principal variations. */
+.maia-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-sys-space-3);
+  padding: var(--md-sys-space-4);
+  border-radius: var(--md-sys-shape-xl);
+  background:
+    radial-gradient(circle at 88% 8%, color-mix(in oklab, var(--md-sys-color-tertiary-container) 65%, transparent), transparent 44%),
+    var(--md-sys-color-surface-container-lowest);
+  border: 1px solid color-mix(in oklab, var(--md-sys-color-tertiary) 24%, var(--md-sys-color-outline-variant));
+}
+.maia-panel[hidden] { display: none; }
+.maia-panel__head,
+.maia-install-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--md-sys-space-3);
+}
+.maia-panel__eyebrow {
+  color: var(--md-sys-color-tertiary);
+  letter-spacing: 0.1em;
+}
+.maia-panel__caption,
+.maia-panel__disclosure,
+.maia-history-note,
+.maia-policy-warning,
+.maia-history-settings-note {
+  margin: 0;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+.maia-panel__disclosure {
+  padding: 7px 9px;
+  border-left: 3px solid var(--md-sys-color-tertiary);
+  border-radius: 0 var(--md-sys-shape-sm) var(--md-sys-shape-sm) 0;
+  background: color-mix(in oklab, var(--md-sys-color-tertiary-container) 38%, transparent);
+}
+.maia-model-badge,
+.maia-install-state {
+  flex: 0 0 auto;
+  border-radius: var(--md-sys-shape-full);
+  padding: 4px 9px;
+  font-family: var(--md-ref-typeface-brand);
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  background: var(--md-sys-color-tertiary-container);
+  color: var(--md-sys-color-on-tertiary-container);
+}
+.maia-install-state[data-state="ready"] {
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+}
+.maia-install-state[data-state="error"] {
+  background: var(--md-sys-color-error-container);
+  color: var(--md-sys-color-on-error-container);
+}
+.maia-move-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+}
+.maia-move {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 11px;
+  border-radius: var(--md-sys-shape-lg);
+  background: color-mix(in oklab, var(--md-sys-color-tertiary-container) 28%, var(--md-sys-color-surface-container-lowest));
+  animation: maiaPolicyIn var(--md-sys-motion-med) var(--md-sys-motion-spatial) both;
+  animation-delay: calc(var(--maia-index, 0) * 55ms);
+}
+@keyframes maiaPolicyIn {
+  from { opacity: 0; transform: translateY(7px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.maia-move__rank {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--md-sys-color-tertiary-container);
+  color: var(--md-sys-color-on-tertiary-container);
+  font-size: 0.75rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.maia-move__main { min-width: 0; }
+.maia-move__san {
+  display: block;
+  font-family: var(--md-ref-typeface-brand);
+  font-size: 1.0625rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.maia-move__uci {
+  display: block;
+  margin-top: 1px;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+}
+.maia-move__probability {
+  color: var(--md-sys-color-tertiary);
+  font-family: var(--md-ref-typeface-brand);
+  font-size: 0.9375rem;
+  font-weight: 850;
+  font-variant-numeric: tabular-nums;
+}
+.maia-outcome {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: var(--md-sys-space-2);
+  border-top: 1px solid var(--md-sys-color-outline-variant);
+}
+.maia-outcome__title {
+  margin: 0;
+  color: var(--md-sys-color-on-surface-variant);
+  letter-spacing: 0.08em;
+}
+.maia-outcome__caption { margin: 0; font-size: 0.8125rem; line-height: 1.35; }
+.maia-outcome__bar {
+  display: flex;
+  width: 100%;
+  height: 8px;
+  overflow: hidden;
+  border-radius: var(--md-sys-shape-full);
+  background: var(--md-sys-color-surface-container-highest);
+}
+.maia-outcome__seg { min-width: 0; transition: width var(--md-sys-motion-slow) var(--md-sys-motion-spatial); }
+.maia-outcome__seg--win { background: var(--md-sys-color-primary); }
+.maia-outcome__seg--draw { background: var(--md-sys-color-secondary); }
+.maia-outcome__seg--loss { background: var(--md-sys-color-error); }
+.maia-policy-warning {
+  padding: 8px 10px;
+  border-radius: var(--md-sys-shape-md);
+  background: var(--md-sys-color-error-container);
+  color: var(--md-sys-color-on-error-container);
+}
+.maia-settings-block .md-field-label { display: block; margin: var(--md-sys-space-3) 0 var(--md-sys-space-1); }
+.maia-number-input,
+.maia-select {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--md-sys-color-outline);
+  border-radius: var(--md-sys-shape-md);
+  padding: 0 12px;
+  color: var(--md-sys-color-on-surface);
+  background: var(--md-sys-color-surface-container-lowest);
+  font: inherit;
+}
+.maia-number-input:focus-visible,
+.maia-select:focus-visible { outline: 3px solid color-mix(in oklab, var(--md-sys-color-primary) 45%, transparent); outline-offset: 1px; }
+.maia-link-ratings { margin-top: var(--md-sys-space-3); }
+.maia-install-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-sys-space-2);
+  padding: 12px;
+  border-radius: var(--md-sys-shape-lg);
+  background: var(--md-sys-color-surface-container-low);
+}
+.maia-install-card .md-help { margin: 0; }
+.maia-install-progress {
+  height: 6px;
+  overflow: hidden;
+  border-radius: var(--md-sys-shape-full);
+  background: var(--md-sys-color-surface-container-highest);
+}
+.maia-install-progress__fill {
+  display: block;
+  width: 0%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--md-sys-color-primary);
+  transition: width 180ms ease-out;
+}
+.maia-install-actions { margin-top: 2px; }
+#app.engine-maia .md-toolbar__label { color: var(--md-sys-color-tertiary); }
